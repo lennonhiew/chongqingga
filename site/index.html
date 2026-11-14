@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Chongqingga</title>
+  <meta name="description" content="Vote where we go in Chongqing and Chengdu.">
+  <meta name="theme-color" content="#f5f5f7" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="stylesheet" href="base.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="bar" id="bar">
+    <span class="bar-title" id="barTitle">Chongqingga</span>
+    <button class="me pressable" id="meBtn" hidden></button>
+  </header>
+
+  <main id="app">
+    <section class="hero">
+      <h1 id="tripName">Chongqingga</h1>
+      <p class="dates" id="tripDates"></p>
+      <div class="flights" id="flights"></div>
+    </section>
+
+    <nav class="seg" id="seg" role="tablist" aria-label="Polls"><span class="seg-pill" id="segPill"></span></nav>
+    <section class="poll" id="poll" role="tabpanel"></section>
+    <p class="foot">Prices are per person, in yuan, from Trip.com and official sites. "est" means a rough guess.<br><button class="link" id="creditsBtn">Photo credits</button></p>
+  </main>
+
+  <button class="tray material pressable" id="tray" hidden>
+    <span class="tray-left">
+      <span class="tray-label">Your picks</span>
+      <span class="tray-count" id="trayCount">0 places</span>
+    </span>
+    <span class="tray-right">
+      <span class="tray-total" id="trayCny">Free</span>
+      <span class="tray-rm" id="trayRm">RM0</span>
+    </span>
+  </button>
+
+  <div class="offline" id="offline" hidden>Reconnecting…</div>
+  <script src="vendor/supabase.js"></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

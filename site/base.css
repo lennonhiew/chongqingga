@@ -1,0 +1,193 @@
+/* Shared tokens and pieces for the friends' site and the admin app. */
+:root {
+  --bg: #f5f5f7;
+  --card: #ffffff;
+  --raised: #ffffff;
+  --fill: rgba(118, 118, 128, 0.12);
+  --fill-2: rgba(118, 118, 128, 0.07);
+  --text: #1d1d1f;
+  --text-2: #6e6e73;
+  --text-3: #a1a1a6;
+  --sep: rgba(60, 60, 67, 0.12);
+  --accent: #0071e3;
+  --on-accent: #ffffff;
+  --chili: #e5383b;     /* Chongqing hotpot red */
+  --bamboo: #2a9d68;    /* Chengdu bamboo green */
+  --dusk: #5e5ce6;      /* night */
+  --sun: #f59e0b;       /* day */
+  --material: rgba(250, 250, 252, 0.72);
+  --material-edge: rgba(255, 255, 255, 0.55);
+  --shadow: 0 1px 1px rgba(0, 0, 0, 0.03), 0 8px 24px rgba(0, 0, 0, 0.06);
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+  --spring: ease-out;
+  --spring-bouncy: ease-out;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #000000;
+    --card: #1c1c1e;
+    --raised: #2c2c2e;
+    --fill: rgba(118, 118, 128, 0.24);
+    --fill-2: rgba(118, 118, 128, 0.14);
+    --text: #f5f5f7;
+    --text-2: #98989d;
+    --text-3: #636366;
+    --sep: rgba(84, 84, 88, 0.55);
+    --accent: #2997ff;
+    --chili: #ff5a5f;
+    --bamboo: #3ecf8e;
+    --dusk: #7d7aff;
+    --material: rgba(22, 22, 24, 0.72);
+    --material-edge: rgba(255, 255, 255, 0.07);
+    --shadow: 0 0 0 1px rgba(255, 255, 255, 0.04);
+    color-scheme: dark;
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  :root { --material: var(--card); }
+}
+@media (prefers-contrast: more) {
+  :root { --text-2: var(--text); --sep: var(--text-2); }
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  font-family: var(--font);
+  font-size: 17px;
+  line-height: 1.47;
+  letter-spacing: -0.01em;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; text-align: inherit; letter-spacing: inherit; }
+input, textarea, select { font: inherit; color: inherit; letter-spacing: inherit; }
+:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 55%, transparent); outline-offset: 2px; }
+
+/* Press feedback on pointer-down, spring back on release */
+.pressable { transition: transform 0.5s var(--spring); }
+.pressable:active { transform: scale(0.97); transition: transform 0.1s ease-out; }
+
+.material {
+  background: var(--material);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+}
+
+.avatar {
+  --h: 211;
+  --size: 28px;
+  width: var(--size);
+  height: var(--size);
+  flex: none;
+  border-radius: 50%;
+  display: inline-grid;
+  place-items: center;
+  font-size: calc(var(--size) * 0.38);
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  color: #fff;
+  background: linear-gradient(160deg, hsl(var(--h) 75% 62%), hsl(var(--h) 70% 48%));
+  box-shadow: 0 0 0 2px var(--card);
+  user-select: none;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 20px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 16px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.btn[disabled] { opacity: 0.4; pointer-events: none; }
+.btn.secondary { background: var(--fill); color: var(--text); }
+.btn.plain { background: none; color: var(--accent); padding: 0 8px; }
+.btn.danger { background: color-mix(in srgb, var(--chili) 13%, transparent); color: var(--chili); }
+.btn.wide { width: 100%; min-height: 50px; font-size: 17px; }
+
+.field {
+  width: 100%;
+  min-height: 48px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--fill);
+  padding: 12px 16px;
+  font-size: 17px;
+  outline: none;
+  transition: box-shadow 0.2s;
+}
+.field:focus { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent); }
+textarea.field { resize: vertical; min-height: 84px; line-height: 1.4; }
+
+/* Sheets */
+.scrim { position: fixed; inset: 0; z-index: 50; background: rgba(0, 0, 0, 0.34); }
+.sheet {
+  position: fixed;
+  z-index: 51;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-width: 540px;
+  margin: 0 auto;
+  max-height: 90dvh;
+  overflow: auto;
+  overscroll-behavior: contain;
+  background: var(--card);
+  border-radius: 28px 28px 0 0;
+  padding: 8px 24px calc(28px + env(safe-area-inset-bottom));
+  box-shadow: 0 -12px 48px rgba(0, 0, 0, 0.2);
+}
+@media (min-width: 700px) {
+  .sheet { bottom: 24px; border-radius: 28px; max-height: calc(100dvh - 48px); }
+}
+.grabber { width: 36px; height: 5px; border-radius: 3px; background: var(--text-3); opacity: 0.45; margin: 0 auto 18px; }
+.sheet h2 { font-family: var(--display); font-size: 28px; line-height: 1.12; letter-spacing: -0.022em; font-weight: 700; }
+.sheet .lede { color: var(--text-2); margin-top: 6px; }
+body.sheet-open { overflow: hidden; }
+
+.toast {
+  position: fixed;
+  z-index: 60;
+  left: 50%;
+  bottom: calc(110px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  padding: 12px 18px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text) 88%, transparent);
+  color: var(--bg);
+  font-size: 15px;
+  font-weight: 550;
+  white-space: nowrap;
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+}
+
+.when {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 9px 2px 7px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0;
+  background: color-mix(in srgb, var(--sun) 15%, transparent);
+  color: color-mix(in srgb, var(--sun) 70%, var(--text));
+}
+.when.night, .when.latenight { background: color-mix(in srgb, var(--dusk) 15%, transparent); color: color-mix(in srgb, var(--dusk) 80%, var(--text)); }
+.when.sunset { background: color-mix(in srgb, #ff6b3d 15%, transparent); color: color-mix(in srgb, #ff6b3d 75%, var(--text)); }
+.when.fullday { background: var(--fill); color: var(--text-2); }
+
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
