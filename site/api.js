@@ -34,7 +34,7 @@ async function loadState() {
     sb.from("cq_settings").select("data").eq("id", 1).maybeSingle().then(ok),
     sb.from("cq_polls").select("*").order("sort").then(ok),
     sb.from("cq_options").select("*").order("sort").then(ok),
-    sb.from("cq_members").select("*").order("joined_at").then(ok),
+    sb.from("cq_members").select("*").order("joined_at").order("name").then(ok),
     sb.from("cq_votes").select("*").order("at").then(ok),
   ]);
   return {
