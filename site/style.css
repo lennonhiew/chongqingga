@@ -107,15 +107,16 @@
 .poll-head h2 { font-family: var(--display); font-size: 30px; line-height: 1.1; letter-spacing: -0.025em; font-weight: 750; }
 .poll-head p { color: var(--text-2); margin-top: 4px; font-size: 16px; }
 
-.options { list-style: none; display: grid; gap: 12px; }
-/* Skip drawing cards that are off screen; keeps scrolling at the display's full refresh rate */
-.options > li { content-visibility: auto; contain-intrinsic-size: auto 420px; }
-.options:not(.has-photos) > li { contain-intrinsic-size: auto 170px; }
+.options { list-style: none; display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+/* Skip drawing cards that are off screen; keeps scrolling at the display's full refresh rate.
+   Only the height is guessed: a guessed width made iPhone Safari draw cards wider than the screen. */
+.options > li { min-width: 0; content-visibility: auto; contain-intrinsic-block-size: auto 420px; }
+.options:not(.has-photos) > li { contain-intrinsic-block-size: auto 170px; }
 .opt {
   --tint: var(--accent);
   position: relative;
   display: grid;
-  grid-template-columns: 52px 1fr 30px;
+  grid-template-columns: 52px minmax(0, 1fr) 30px;
   gap: 14px;
   width: 100%;
   padding: 16px 16px 16px 14px;
@@ -172,7 +173,7 @@
 .single .check { border-radius: 50%; }
 
 /* Cards with a photo: inset image on top, tick floats on the photo */
-.opt.has-photo { grid-template-columns: 1fr; gap: 0; padding: 8px; }
+.opt.has-photo { grid-template-columns: minmax(0, 1fr); gap: 0; padding: 8px; }
 .opt.has-photo .opt-body { padding: 12px 8px 6px; }
 .photo {
   position: relative;
