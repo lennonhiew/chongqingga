@@ -64,10 +64,12 @@ function renderTabs() {
 function movePill(animate = true) {
   const b = $(`#seg button[data-id="${activePoll}"]`), pill = $("#segPill");
   if (!b) return;
-  const from = { left: pill.style.left || b.offsetLeft + "px", width: pill.style.width || b.offsetWidth + "px" };
-  const to = { left: b.offsetLeft + "px", width: b.offsetWidth + "px" };
-  Object.assign(pill.style, to);
-  if (animate) play(pill, [from, to], { damping: 0.82, response: 0.38 });
+  // Tabs are equal width, so only translateX moves: stays on the GPU at the screen's full refresh rate.
+  pill.style.width = b.offsetWidth + "px";
+  const from = pill.style.transform || `translateX(${b.offsetLeft}px)`;
+  const to = `translateX(${b.offsetLeft}px)`;
+  pill.style.transform = to;
+  if (animate && from !== to) play(pill, [{ transform: from }, { transform: to }], { damping: 0.82, response: 0.38 });
 }
 addEventListener("resize", () => movePill(false));
 
@@ -91,7 +93,7 @@ function renderPoll(dir = 0) {
   cards = new Map();
   if (!poll) { box.replaceChildren(); return; }
   const options = state.options.filter((o) => o.pollId === poll.id);
-  const list = h("ul.options", { class: `options ${cityClass(poll)} ${poll.multi ? "" : "single"}` },
+  const list = h("ul.options", { class: `options ${cityClass(poll)} ${poll.multi ? "" : "single"} ${options.some((o) => o.image) ? "has-photos" : ""}` },
     options.map((o) => h("li", optionCard(o, poll))));
   box.replaceChildren(
     h("div.poll-head", h("h2", poll.title), h("p", poll.subtitle || (poll.multi ? "Pick as many as you like." : "Pick one."))),
@@ -300,6 +302,25 @@ function apply(next) {
     play($("#tripDates"), [{ opacity: 0, transform: "translateY(10px)" }, { opacity: 1, transform: "none" }], { response: 0.6, delay: 70 });
     if (!me) setTimeout(() => askWho(false), 650);
   }
+}
+
+// ?fps shows a live frame-rate meter (checks the phone is really drawing at 120 Hz)
+if (new URLSearchParams(location.search).has("fps")) {
+  const meter = h("div.fps", "– fps");
+  document.body.append(meter);
+  let frames = 0, t0 = performance.now(), best = 0, worst = 0, last = t0;
+  const tick = (now) => {
+    frames++;
+    worst = Math.max(worst, now - last); last = now;
+    if (now - t0 >= 500) {
+      const fps = Math.round((frames * 1000) / (now - t0));
+      best = Math.max(best, fps);
+      meter.textContent = `${fps} fps  (max ${best}, slowest frame ${worst.toFixed(1)} ms)`;
+      frames = 0; t0 = now; worst = 0;
+    }
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
 }
 
 subscribe(apply, (ok) => ($("#offline").hidden = ok || !state));

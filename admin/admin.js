@@ -64,7 +64,7 @@ function render(entering = false) {
   const keepScroll = content.scrollTop;
   const el = { results: viewResults, places: viewPlaces, friends: viewFriends, settings: viewSettings }[view]();
   // keep old bar widths so they animate to the new values
-  const oldBars = new Map([...content.querySelectorAll(".bar-fill[data-k]")].map((b) => [b.dataset.k, b.style.width]));
+  const oldBars = new Map([...content.querySelectorAll(".bar-fill[data-k]")].map((b) => [b.dataset.k, b.style.transform]));
   content.replaceChildren(el);
   if (entering) {
     content.scrollTop = 0;
@@ -72,8 +72,8 @@ function render(entering = false) {
   } else content.scrollTop = keepScroll;
   el.querySelectorAll(".bar-fill[data-k]").forEach((b) => {
     const target = b.dataset.w;
-    b.style.width = oldBars.get(b.dataset.k) || "0%";
-    requestAnimationFrame(() => requestAnimationFrame(() => (b.style.width = target)));
+    b.style.transform = oldBars.get(b.dataset.k) || "scaleX(0)";
+    requestAnimationFrame(() => requestAnimationFrame(() => (b.style.transform = target)));
   });
   el.querySelectorAll(".ring .val").forEach((c) => {
     const target = c.dataset.off;
@@ -121,7 +121,7 @@ function pollResults(p) {
         pic(o),
         h("span.nm", o.name, h("small", `${WHEN[o.when]?.label || ""}, ${yuan(o.priceCny)}`)),
         h("div.bar", { title: names.map((m) => m.name).join(", ") || "No votes" },
-          h("div.bar-fill", { "data-k": o.id, "data-w": `${(votes.length / max) * 100}%` }),
+          h("div.bar-fill", { "data-k": o.id, "data-w": `scaleX(${votes.length / max})` }),
           h("div.bar-who", names.map((m) => avatar(m)), names.length ? h("span.bar-names", names.map((m) => m.name).join(", ")) : null)),
         h("span.cnt", votes.length, h("small", votes.length === 1 ? "vote" : "votes")));
     })),
