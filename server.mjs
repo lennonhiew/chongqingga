@@ -7,6 +7,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { seed } from "./seed.mjs";
+import { buildPlan } from "./plan-seed.mjs";
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const DB_FILE = path.join(process.env.CQ_DATA_DIR || path.join(ROOT, "data"), "db.json");
@@ -15,6 +16,7 @@ const MIME = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".
 let db;
 try { db = JSON.parse(fs.readFileSync(DB_FILE, "utf8")); } catch { db = seed(); }
 applyPhotos();
+if (!db.plan) db.plan = buildPlan(db.options, db.polls);
 save();
 
 // Starter photos matched to places by name (site/img/credits.json).
@@ -111,7 +113,11 @@ const adminActions = {
     if (r > 0 && r < 10) db.settings.rmPerCny = r;
   },
   clearVotes() { db.votes = []; },
-  resetAll() { db = seed(); applyPhotos(); },
+  resetAll() { db = seed(); applyPhotos(); db.plan = buildPlan(db.options, db.polls); },
+  savePlan(plan) {
+    if (!plan || !Array.isArray(plan.days) || !Array.isArray(plan.trips)) throw new Error("That plan looks broken.");
+    db.plan = plan;
+  },
   // Photo picked in the admin app, already resized there. Saved into site/img.
   uploadImage({ dataUrl }) {
     const m = /^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/=]+)$/.exec(dataUrl || "");
@@ -153,7 +159,7 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(200, { "content-type": "text/javascript", "cache-control": "no-store" });
       return res.end(`window.CQ_ADMIN = ${JSON.stringify(cfg)};`);
     }
-    if (url.pathname === "/api/starter") { const s = seed(); applyPhotos(s); return send(res, 200, s); }
+    if (url.pathname === "/api/starter") { const s = seed(); applyPhotos(s); s.plan = buildPlan(s.options, s.polls); return send(res, 200, s); }
     if (url.pathname === "/api/events") {
       res.writeHead(200, { "content-type": "text/event-stream", "cache-control": "no-store", connection: "keep-alive" });
       res.write(`data: ${JSON.stringify(db)}\n\n`);

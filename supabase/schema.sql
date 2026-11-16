@@ -123,3 +123,18 @@ end $$;
 -- Photos the admin uploads (public to read; only the service key can write)
 insert into storage.buckets (id, name, public) values ('cq-photos', 'cq-photos', true)
 on conflict (id) do nothing;
+
+-- Trip plan (days, flights, budget) as one document the admin app edits.
+create table if not exists public.cq_plan (
+  id int primary key default 1 check (id = 1),
+  data jsonb not null default '{}'
+);
+alter table public.cq_plan enable row level security;
+drop policy if exists "cq read" on public.cq_plan;
+create policy "cq read" on public.cq_plan for select to anon, authenticated using (true);
+do $$
+begin
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'cq_plan') then
+    alter publication supabase_realtime add table public.cq_plan;
+  end if;
+end $$;

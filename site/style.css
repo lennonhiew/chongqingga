@@ -1,5 +1,5 @@
 /* Friends' poll page */
-#app { max-width: 640px; margin: 0 auto; padding: 0 16px calc(130px + env(safe-area-inset-bottom)); }
+#app { max-width: 640px; margin: 0 auto; padding: 0 16px calc(190px + env(safe-area-inset-bottom)); }
 
 /* Top bar: transparent over the hero, frosted once you scroll */
 .bar {
@@ -228,12 +228,46 @@
 
 .foot { margin: 28px 8px 0; font-size: 13px; color: var(--text-3); text-align: center; }
 
+/* Bottom tab bar (Plan / Vote) */
+.tabbar {
+  position: fixed;
+  z-index: 35;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  max-width: 100%;
+  padding: 6px max(16px, calc(50% - 200px)) calc(6px + env(safe-area-inset-bottom));
+  background: var(--material);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+  box-shadow: 0 -0.5px 0 var(--sep);
+}
+.tab {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding: 4px 0 2px;
+  color: var(--text-3);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  transition: color 0.2s;
+}
+.tab svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.tab[aria-current="page"] { color: var(--accent); }
+.tab[aria-current="page"] svg { stroke-width: 2; }
+.tab-dot { position: absolute; top: 4px; left: calc(50% + 10px); width: 8px; height: 8px; border-radius: 50%; background: var(--chili); box-shadow: 0 0 0 2px var(--bg); }
+.page { display: block; }
+
 /* Bottom tray */
 .tray {
   position: fixed;
   z-index: 30;
   left: 50%;
-  bottom: calc(16px + env(safe-area-inset-bottom));
+  bottom: calc(74px + env(safe-area-inset-bottom));
   width: min(608px, calc(100% - 32px));
   translate: -50% 0;
   display: flex;
@@ -283,3 +317,108 @@
   .hero { padding-top: 28px; }
   .flights { grid-template-columns: 1fr 1fr; }
 }
+
+/* ================= Plan page ================= */
+.plan-sec { margin-top: 30px; }
+.plan-sec:first-child { margin-top: 4px; }
+.sec-title { font-family: var(--display); font-size: 24px; line-height: 1.15; letter-spacing: -0.022em; font-weight: 750; margin: 0 4px 12px; }
+
+/* Who's where: one row per group, coloured stays along the trip dates */
+.where { background: var(--card); border-radius: 22px; box-shadow: var(--shadow); padding: 16px 16px 10px; }
+.where-row + .where-row { margin-top: 14px; }
+.where-who { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 650; margin-bottom: 7px; }
+.where-row.mine .where-who { color: var(--accent); }
+.you { font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); }
+.faces { display: inline-flex; }
+.faces .avatar { --size: 22px; margin-right: -6px; }
+.faces .avatar:last-child { margin-right: 0; }
+.where-track { position: relative; height: 30px; border-radius: 9px; background: var(--fill-2); }
+.seg-bar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  border-radius: 9px;
+  overflow: hidden;
+  transform-origin: left center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  box-shadow: inset 0 0 0 1.5px var(--card);
+}
+.seg-bar span { overflow: hidden; text-overflow: ellipsis; }
+.seg-bar.cq { background: var(--chili); }
+.seg-bar.cd { background: var(--bamboo); }
+.seg-bar.camp { background: #d48a12; }
+.seg-bar.mixed { background: var(--dusk); }
+.where-before { font-size: 12.5px; color: var(--text-2); margin: -2px 0 7px; }
+.where-axis { display: grid; grid-template-columns: repeat(var(--days), minmax(0, 1fr)); margin-top: 8px; }
+.where-axis span { display: grid; justify-items: center; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.where-axis b { font-size: 12px; font-weight: 650; color: var(--text-2); }
+.where-axis small { font-size: 10px; font-weight: 600; color: var(--text-3); }
+.where-key { display: flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 12px; color: var(--text-2); font-weight: 600; }
+.where-key .k { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.where-key .k.cd { margin-left: 10px; }
+.k.cq { background: var(--chili); } .k.cd { background: var(--bamboo); }
+
+/* Cost */
+.cost-card { background: var(--card); border-radius: 22px; box-shadow: var(--shadow); padding: 18px 18px 14px; }
+.cost-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding-bottom: 12px; box-shadow: inset 0 -0.5px 0 var(--sep); }
+.cost-head > span { color: var(--text-2); font-weight: 600; font-size: 15px; }
+.cost-total { font-family: var(--display); font-size: 32px; font-weight: 800; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.cost-rows { list-style: none; }
+.cost-rows li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 11px 0; }
+.cost-rows li + li { box-shadow: inset 0 0.5px 0 var(--sep); }
+.cost-rows li > span:first-child { font-weight: 600; font-size: 15.5px; }
+.cost-rows small { display: block; font-weight: 500; color: var(--text-2); font-size: 13px; margin-top: 1px; }
+.cost-rows .v { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cost-note { margin-top: 8px; font-size: 13px; color: var(--text-2); line-height: 1.4; }
+
+/* Trips (reuse the flight card look) */
+.trips { display: grid; gap: 10px; }
+.trip { position: relative; }
+.trip.mine { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent) 55%, transparent), var(--shadow); }
+.trip .flight-time sup { font-size: 12px; font-weight: 700; color: var(--chili); margin-left: 2px; }
+.status { font-size: 11.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: color-mix(in srgb, var(--sun) 16%, transparent); color: color-mix(in srgb, var(--sun) 75%, var(--text)); }
+.status.booked { background: color-mix(in srgb, var(--bamboo) 16%, transparent); color: var(--bamboo); }
+.trip-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 10px; padding-top: 10px; box-shadow: inset 0 0.5px 0 var(--sep); }
+.trip-who { display: flex; align-items: center; gap: 10px; font-size: 13.5px; font-weight: 600; color: var(--text-2); min-width: 0; }
+.trip-who > span:last-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.trip-price { font-weight: 750; font-size: 16px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.trip-price small { font-weight: 500; color: var(--text-2); font-size: 13px; }
+.trip-note { margin-top: 6px; font-size: 13px; color: var(--text-2); line-height: 1.4; }
+
+/* Day by day: date column + card */
+.days { display: grid; gap: 12px; }
+.day { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 10px; align-items: start; }
+.day-date { position: sticky; top: calc(64px + env(safe-area-inset-top)); display: grid; justify-items: center; padding-top: 10px; line-height: 1.05; }
+.dow { font-size: 12px; font-weight: 700; color: var(--chili); text-transform: none; }
+.dnum { font-family: var(--display); font-size: 26px; font-weight: 800; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.day-date .dnum { font-size: clamp(18px, 6vw, 26px); }
+.mon { font-size: 12px; font-weight: 600; color: var(--text-2); }
+.day-card { background: var(--card); border-radius: 20px; box-shadow: var(--shadow); padding: 14px 14px 8px; min-width: 0; }
+.day-head { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.day-card h3 { font-size: 18px; font-weight: 700; letter-spacing: -0.018em; margin: 6px 2px 6px; line-height: 1.25; }
+.city-chip { font-size: 12px; font-weight: 700; padding: 2px 9px; border-radius: 999px; background: var(--fill); color: var(--text-2); }
+.city-chip.cq { background: color-mix(in srgb, var(--chili) 14%, transparent); color: var(--chili); }
+.city-chip.cd { background: color-mix(in srgb, var(--bamboo) 15%, transparent); color: var(--bamboo); }
+.city-chip.camp { background: color-mix(in srgb, #d48a12 16%, transparent); color: #b8760c; }
+.who-tag { font-size: 11.5px; font-weight: 650; padding: 2px 8px; border-radius: 999px; background: var(--fill-2); color: var(--text-2); white-space: nowrap; }
+.who-tag.sm { display: inline-block; font-size: 10.5px; padding: 1px 7px; margin-top: 3px; }
+.day.not-mine .day-card { opacity: 0.6; }
+.items { list-style: none; }
+.item { display: grid; grid-template-columns: 58px 36px minmax(0, 1fr); align-items: center; gap: 10px; padding: 7px 2px; border-radius: 12px; }
+.item + .item { box-shadow: inset 0 0.5px 0 var(--sep); }
+.item .t { font-size: 12.5px; font-weight: 650; color: var(--text-2); font-variant-numeric: tabular-nums; line-height: 1.2; }
+.item .ic { width: 36px; height: 36px; display: grid; place-items: center; font-size: 19px; border-radius: 10px; background: var(--fill-2); }
+.item .thumb { width: 36px; height: 36px; border-radius: 10px; object-fit: cover; display: block; }
+.item .tx { font-size: 15px; font-weight: 600; line-height: 1.3; min-width: 0; }
+.item .tx small { display: block; font-size: 12.5px; font-weight: 500; color: var(--text-2); }
+.item.not-mine { opacity: 0.5; }
+.item.tap { cursor: pointer; transition: background-color 0.2s, transform 0.45s var(--spring); }
+.item.tap:active { background: var(--fill-2); transform: scale(0.98); transition: transform 0.1s ease-out; }
+.item.tap .tx::after { content: ""; }
+@media (hover: hover) { .item.tap:hover { background: var(--fill-2); } }

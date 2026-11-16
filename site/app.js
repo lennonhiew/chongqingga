@@ -1,5 +1,6 @@
-import { getState, join, vote, subscribe, imgSrc } from "./api.js";
-import { h, $, play, avatar, WHEN, WHEN_ORDER, yuan, ringgit, rollNumber, openSheet, toast, reduceMotion } from "./ui.js";
+import { getState, join, vote, subscribe, imgSrc } from "./api.js?v=8";
+import { h, $, play, avatar, WHEN, WHEN_ORDER, yuan, ringgit, rollNumber, openSheet, toast, reduceMotion } from "./ui.js?v=8";
+import { renderPlan } from "./plan.js?v=8";
 
 const store = {
   get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
@@ -26,28 +27,53 @@ function renderHero() {
   $("#barTitle").textContent = s.tripName;
   document.title = s.tripName;
   $("#tripDates").textContent = s.dates;
-  const box = $("#flights");
-  box.replaceChildren(...(s.flights || []).map((f, i) => flightCard(f, i)));
 }
 
-function flightCard(f, i) {
-  const svg = `
-    <svg class="route" viewBox="0 0 200 38" preserveAspectRatio="none" aria-hidden="true">
-      <path id="arc${i}" class="arc" d="M6 32 Q100 -4 194 32"/>
-      <circle class="dot" cx="6" cy="32" r="3"/><circle class="dot" cx="194" cy="32" r="3"/>
-      <g class="plane"><path d="M-7 -1.6 L4 -1.6 L8 0 L4 1.6 L-7 1.6 Z M-1 -1.5 L-4 -7 L-1.5 -7 L3 -1.5 Z M-1 1.5 L-4 7 L-1.5 7 L3 1.5 Z M-7 -1.4 L-8.5 -4.5 L-6.5 -4.5 L-4.5 -1.4 Z M-7 1.4 L-8.5 4.5 L-6.5 4.5 L-4.5 1.4 Z"/>
-        <animateMotion dur="1.7s" begin="${reduceMotion.matches ? "0s" : 0.35 + i * 0.25 + "s"}" fill="freeze" rotate="auto"
-          keyPoints="${reduceMotion.matches ? "0.5;0.5" : "0;0.5"}" keyTimes="0;1" calcMode="spline" keySplines="0.25 0.1 0.25 1">
-          <mpath href="#arc${i}"/></animateMotion></g>
-    </svg>`;
-  const card = h("div.flight",
-    h("div.flight-top", h("span", `${f.label}, ${f.date}`), h("span", f.no)),
-    h("div.flight-row",
-      h("div.flight-end", h("div.flight-time", f.dep), h("div.flight-code", f.from)),
-      h("div", { html: svg }, h("div.flight-dur", f.dur)),
-      h("div.flight-end.right", h("div.flight-time", f.arr), h("div.flight-code", f.to))));
-  return card;
+// ---------- Pages (bottom tab bar) ----------
+let page = location.hash === "#vote" ? "vote" : "plan";
+const scrollMemo = { plan: 0, vote: 0 };
+
+function showPage(next, { animate = true } = {}) {
+  const prev = page;
+  if (next !== prev) scrollMemo[prev] = scrollY;
+  page = next;
+  history.replaceState(null, "", next === "vote" ? "#vote" : "#plan");
+  document.querySelectorAll(".page").forEach((p) => (p.hidden = p.dataset.page !== next));
+  document.querySelectorAll("#tabbar .tab").forEach((t) => (t.dataset.page === next ? t.setAttribute("aria-current", "page") : t.removeAttribute("aria-current")));
+  if (state) updateTray();
+  if (next === "vote") requestAnimationFrame(() => movePill(false));
+  if (next !== prev) {
+    scrollTo(0, scrollMemo[next] || 0);
+    if (animate) {
+      const dir = next === "vote" ? 1 : -1;
+      play($(`.page[data-page="${next}"]`), [{ opacity: 0, transform: `translateX(${dir * 24}px)` }, { opacity: 1, transform: "none" }], { damping: 0.9, response: 0.4 });
+      const icon = $(`#tabbar .tab[data-page="${next}"] svg`);
+      play(icon, [{ transform: "scale(.82)" }, { transform: "scale(1)" }], { damping: 0.5, response: 0.35 });
+    }
+  }
 }
+document.querySelectorAll("#tabbar .tab").forEach((t) => t.addEventListener("click", () => showPage(t.dataset.page)));
+
+const planCtx = () => ({
+  state, me, imgSrc, rate,
+  openPlace(optionId) {
+    const o = state.options.find((x) => x.id === optionId);
+    if (!o) return;
+    showPage("vote");
+    if (activePoll !== o.pollId) selectPoll(o.pollId); else renderPoll(0);
+    requestAnimationFrame(() => {
+      const el = cards.get(optionId)?.el;
+      if (!el) return;
+      el.scrollIntoView({ block: "center", behavior: reduceMotion.matches ? "auto" : "smooth" });
+      setTimeout(() => play(el, [{ transform: "scale(1)" }, { transform: "scale(1.03)" }, { transform: "scale(1)" }], { damping: 0.6, response: 0.5 }), 450);
+    });
+  },
+  openPoll(pollId) {
+    showPage("vote");
+    if (activePoll !== pollId) selectPoll(pollId);
+  },
+});
+const drawPlan = () => renderPlan($("#pagePlan"), planCtx());
 
 // ---------- Tabs ----------
 function renderTabs() {
@@ -180,7 +206,8 @@ function updateTray() {
   const picks = myPicks();
   const total = picks.reduce((s, o) => s + (o.priceCny || 0), 0);
   const wasHidden = tray.hidden;
-  tray.hidden = !me;
+  tray.hidden = !me || page !== "vote";
+  $("#voteDot").hidden = !me || state.votes.some((v) => v.memberId === me.id);
   if (wasHidden && !tray.hidden) play(tray, [{ transform: "translateY(140%)" }, { transform: "none" }], { damping: 0.85, response: 0.5, delay: 150 });
   $("#trayCount").textContent = `${picks.length} place${picks.length === 1 ? "" : "s"}`;
   rollNumber($("#trayCny"), total, (v) => (v < 0.5 ? "Free" : yuan(v)));
@@ -238,7 +265,8 @@ function setMe(m) {
   store.set("cq-me", me);
   renderMe();
   updateAll();
-  toast(`Hi ${m.name}! Tap places to vote.`);
+  drawPlan();
+  toast(page === "plan" ? `Hi ${m.name}! Here's your plan.` : `Hi ${m.name}! Tap places to vote.`);
 }
 
 function renderMe() {
@@ -253,8 +281,8 @@ function showPlan() {
   const groups = state.polls.map((p) => ({ p, items: picks.filter((o) => o.pollId === p.id).sort((a, b) => WHEN_ORDER.indexOf(a.when) - WHEN_ORDER.indexOf(b.when)) })).filter((g) => g.items.length);
   const total = picks.reduce((s, o) => s + (o.priceCny || 0), 0);
   const content = h("div",
-    h("h2", "Your plan"),
-    h("p.lede", "Everything you picked, sorted by time of day. Food and hotel not included."),
+    h("h2", "Your picks"),
+    h("p.lede", "Everything you voted for, sorted by time of day. Food and hotel not included."),
     groups.length ? groups.map(({ p, items }) => h("section.plan-group",
       h("h3", p.title, h("small", yuan(items.reduce((s, o) => s + o.priceCny, 0)))),
       h("ul.plan-list", items.map((o) => h("li",
@@ -289,15 +317,17 @@ function apply(next) {
   state = next;
   if (me && !state.members.some((m) => m.id === me.id)) { me = null; store.set("cq-me", null); }
   if (!state.polls.some((p) => p.id === activePoll)) activePoll = state.polls[0]?.id;
-  const key = JSON.stringify([state.settings, state.polls, state.options]);
+  const key = JSON.stringify([state.settings, state.polls, state.options.map((o) => [o.id, o.name, o.image, o.priceCny, o.when, o.note, o.emoji, o.zh, o.credit])]);
   if (key !== structureKey) {
     structureKey = key;
     renderHero();
     renderTabs();
     renderPoll(0);
   } else updateAll();
+  drawPlan();
   renderMe();
   if (first) {
+    showPage(page, { animate: false });
     play($(".hero h1"), [{ opacity: 0, transform: "translateY(14px)" }, { opacity: 1, transform: "none" }], { response: 0.6 });
     play($("#tripDates"), [{ opacity: 0, transform: "translateY(10px)" }, { opacity: 1, transform: "none" }], { response: 0.6, delay: 70 });
     if (!me) setTimeout(() => askWho(false), 650);

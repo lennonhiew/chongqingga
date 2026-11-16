@@ -1,5 +1,6 @@
 import { admin, getState, subscribe, imgSrc, friendsUrl, isLive } from "/site/api.js";
 import { h, $, play, avatar, WHEN, yuan, ringgit, openSheet, toast, ago } from "/site/ui.js";
+import { viewPlan } from "./plan-admin.js";
 
 let state = null;
 let view = localStorage.getItem("cq-admin-view") || "results";
@@ -62,7 +63,7 @@ function render(entering = false) {
   $("#brandName").textContent = state.settings.tripName;
   const content = $("#content");
   const keepScroll = content.scrollTop;
-  const el = { results: viewResults, places: viewPlaces, friends: viewFriends, settings: viewSettings }[view]();
+  const el = { results: viewResults, plan: () => viewPlan({ state, admin, confirmSheet, iconBtn }), places: viewPlaces, friends: viewFriends, settings: viewSettings }[view]();
   // keep old bar widths so they animate to the new values
   const oldBars = new Map([...content.querySelectorAll(".bar-fill[data-k]")].map((b) => [b.dataset.k, b.style.transform]));
   content.replaceChildren(el);

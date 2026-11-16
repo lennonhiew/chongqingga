@@ -30,14 +30,16 @@ const friendly = (m) => (/fetch|network/i.test(m) ? "No connection. Check your i
 const ts = (v) => (v ? Date.parse(v) : 0);
 
 async function loadState() {
-  const [settings, polls, options, members, votes] = await Promise.all([
+  const [settings, polls, options, members, votes, plan] = await Promise.all([
     sb.from("cq_settings").select("data").eq("id", 1).maybeSingle().then(ok),
     sb.from("cq_polls").select("*").order("sort").then(ok),
     sb.from("cq_options").select("*").order("sort").then(ok),
     sb.from("cq_members").select("*").order("joined_at").order("name").then(ok),
     sb.from("cq_votes").select("*").order("at").then(ok),
+    sb.from("cq_plan").select("data").eq("id", 1).maybeSingle().then(ok),
   ]);
   return {
+    plan: plan?.data || null,
     settings: settings?.data || {},
     polls: polls.map((p) => ({ id: p.id, title: p.title, subtitle: p.subtitle, multi: p.multi, sort: p.sort })),
     options: options.map((o) => ({
@@ -83,7 +85,7 @@ export function subscribe(onState, onStatus = () => {}) {
   };
   const soon = () => { clearTimeout(timer); timer = setTimeout(refresh, 120); };
   const ch = sb.channel("cq-" + Math.random().toString(36).slice(2));
-  for (const table of ["cq_settings", "cq_polls", "cq_options", "cq_members", "cq_votes"]) {
+  for (const table of ["cq_settings", "cq_polls", "cq_options", "cq_members", "cq_votes", "cq_plan"]) {
     ch.on("postgres_changes", { event: "*", schema: "public", table }, soon);
   }
   ch.subscribe((status) => {
@@ -158,6 +160,10 @@ const adminActions = {
     const data = { ...cur, tripName: clean(s.tripName, 40) || cur.tripName, dates: clean(s.dates, 60), rmPerCny: r > 0 && r < 10 ? r : cur.rmPerCny };
     ok(await sb.from("cq_settings").upsert({ id: 1, data }));
   },
+  async savePlan(plan) {
+    if (!plan || !Array.isArray(plan.days) || !Array.isArray(plan.trips)) throw new Error("That plan looks broken.");
+    ok(await sb.from("cq_plan").upsert({ id: 1, data: plan }));
+  },
   async clearVotes() { ok(await sb.from("cq_votes").delete().neq("option_id", "")); },
   async resetAll() {
     const start = await (await fetch("/api/starter")).json();
@@ -186,6 +192,7 @@ export async function importState(s) {
     price_cny: o.priceCny || 0, note: o.note || "", image: o.image || "", credit: o.credit || "", source: o.source || "", sort: i,
   }))));
   ok(await sb.from("cq_members").upsert(s.members.map((m) => ({ id: m.id, name: m.name }))));
+  if (s.plan) ok(await sb.from("cq_plan").upsert({ id: 1, data: s.plan }));
 }
 
 export async function admin(action, payload) {

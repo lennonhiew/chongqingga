@@ -11,8 +11,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icon.svg">
-  <link rel="stylesheet" href="base.css?v=4">
-  <link rel="stylesheet" href="style.css?v=4">
+  <link rel="stylesheet" href="base.css?v=8">
+  <link rel="stylesheet" href="style.css?v=8">
 </head>
 <body>
   <header class="bar" id="bar">
@@ -24,13 +24,27 @@
     <section class="hero">
       <h1 id="tripName">Chongqingga</h1>
       <p class="dates" id="tripDates"></p>
-      <div class="flights" id="flights"></div>
     </section>
 
-    <nav class="seg" id="seg" role="tablist" aria-label="Polls"><span class="seg-pill" id="segPill"></span></nav>
-    <section class="poll" id="poll" role="tabpanel"></section>
-    <p class="foot">Prices are per person, in yuan, from Trip.com and official sites. "est" means a rough guess.<br><button class="link" id="creditsBtn">Photo credits</button></p>
+    <section class="page" id="pagePlan" data-page="plan" aria-label="Plan"></section>
+
+    <section class="page" id="pageVote" data-page="vote" aria-label="Vote" hidden>
+      <nav class="seg" id="seg" role="tablist" aria-label="Polls"><span class="seg-pill" id="segPill"></span></nav>
+      <section class="poll" id="poll" role="tabpanel"></section>
+      <p class="foot">Prices are per person, in yuan, from Trip.com and official sites. "est" means a rough guess.<br><button class="link" id="creditsBtn">Photo credits</button></p>
+    </section>
   </main>
+
+  <nav class="tabbar" id="tabbar" aria-label="Pages">
+    <button class="tab" data-page="plan" aria-current="page">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="3.5"/><path d="M3.5 10h17M8 3v4M16 3v4M8 14h3M8 17h6"/></svg>
+      <span>Plan</span>
+    </button>
+    <button class="tab" data-page="vote">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M8.2 12.3l2.6 2.6 5-5.4"/></svg>
+      <span>Vote</span><i class="tab-dot" id="voteDot" hidden></i>
+    </button>
+  </nav>
 
   <button class="tray material pressable" id="tray" hidden>
     <span class="tray-left">
@@ -45,6 +59,6 @@
 
   <div class="offline" id="offline" hidden>Reconnecting…</div>
   <script src="vendor/supabase.js"></script>
-  <script type="module" src="app.js?v=4"></script>
+  <script type="module" src="app.js?v=8"></script>
 </body>
 </html>
