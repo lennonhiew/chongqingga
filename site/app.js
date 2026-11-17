@@ -1,6 +1,18 @@
-import { getState, join, vote, subscribe, imgSrc } from "./api.js?v=8";
-import { h, $, play, avatar, WHEN, WHEN_ORDER, yuan, ringgit, rollNumber, openSheet, toast, reduceMotion } from "./ui.js?v=8";
-import { renderPlan } from "./plan.js?v=8";
+import { getState, join, vote, subscribe, imgSrc, saveDoc, deleteDoc } from "./api.js?v=10";
+import { h, $, play, avatar, WHEN, WHEN_ORDER, yuan, ringgit, rollNumber, openSheet, toast, reduceMotion } from "./ui.js?v=10";
+import { renderPlan } from "./plan.js?v=10";
+import { renderInfo } from "./info.js?v=10";
+
+// ---------- Loading splash ----------
+const splashShownAt = performance.now();
+if (reduceMotion.matches) document.querySelector(".splash-icon")?.pauseAnimations?.();
+function hideSplash() {
+  const s = document.getElementById("splash");
+  if (!s || s.classList.contains("out")) return;
+  const wait = Math.max(0, 900 - (performance.now() - splashShownAt)); // long enough to see one flight
+  setTimeout(() => { s.classList.add("out"); s.addEventListener("animationend", () => s.remove(), { once: true }); setTimeout(() => s.remove(), 800); }, wait);
+}
+setTimeout(hideSplash, 8000); // never get stuck behind it
 
 const store = {
   get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
@@ -30,14 +42,15 @@ function renderHero() {
 }
 
 // ---------- Pages (bottom tab bar) ----------
-let page = location.hash === "#vote" ? "vote" : "plan";
+const PAGES = ["plan", "vote", "info"];
+let page = PAGES.includes(location.hash.slice(1)) ? location.hash.slice(1) : "plan";
 const scrollMemo = { plan: 0, vote: 0 };
 
 function showPage(next, { animate = true } = {}) {
   const prev = page;
   if (next !== prev) scrollMemo[prev] = scrollY;
   page = next;
-  history.replaceState(null, "", next === "vote" ? "#vote" : "#plan");
+  history.replaceState(null, "", "#" + next);
   document.querySelectorAll(".page").forEach((p) => (p.hidden = p.dataset.page !== next));
   document.querySelectorAll("#tabbar .tab").forEach((t) => (t.dataset.page === next ? t.setAttribute("aria-current", "page") : t.removeAttribute("aria-current")));
   if (state) updateTray();
@@ -45,7 +58,7 @@ function showPage(next, { animate = true } = {}) {
   if (next !== prev) {
     scrollTo(0, scrollMemo[next] || 0);
     if (animate) {
-      const dir = next === "vote" ? 1 : -1;
+      const dir = Math.sign(PAGES.indexOf(next) - PAGES.indexOf(prev)) || 1;
       play($(`.page[data-page="${next}"]`), [{ opacity: 0, transform: `translateX(${dir * 24}px)` }, { opacity: 1, transform: "none" }], { damping: 0.9, response: 0.4 });
       const icon = $(`#tabbar .tab[data-page="${next}"] svg`);
       play(icon, [{ transform: "scale(.82)" }, { transform: "scale(1)" }], { damping: 0.5, response: 0.35 });
@@ -73,7 +86,8 @@ const planCtx = () => ({
     if (activePoll !== pollId) selectPoll(pollId);
   },
 });
-const drawPlan = () => renderPlan($("#pagePlan"), planCtx());
+const drawPlan = () => { renderPlan($("#pagePlan"), planCtx()); drawInfo(); };
+const drawInfo = () => state && renderInfo($("#pageInfo"), { state, me, api: { saveDoc, deleteDoc } });
 
 // ---------- Tabs ----------
 function renderTabs() {
@@ -327,6 +341,7 @@ function apply(next) {
   drawPlan();
   renderMe();
   if (first) {
+    hideSplash();
     showPage(page, { animate: false });
     play($(".hero h1"), [{ opacity: 0, transform: "translateY(14px)" }, { opacity: 1, transform: "none" }], { response: 0.6 });
     play($("#tripDates"), [{ opacity: 0, transform: "translateY(10px)" }, { opacity: 1, transform: "none" }], { response: 0.6, delay: 70 });

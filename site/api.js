@@ -3,8 +3,9 @@
 // Preview: the local server (add ?local to the URL, or run without a config).
 import { CONFIG } from "./config.js";
 
-const ADMIN = window.CQ_ADMIN || null; // { url, serviceKey } — only set inside the admin app
-const useLocal = !ADMIN && (new URLSearchParams(location.search).has("local") || !CONFIG.supabaseUrl || !window.supabase);
+const forceLocal = new URLSearchParams(location.search).has("local");
+const ADMIN = forceLocal ? null : window.CQ_ADMIN || null; // { url, serviceKey } — only set inside the admin app
+const useLocal = forceLocal || (!ADMIN && (!CONFIG.supabaseUrl || !window.supabase));
 const sb = useLocal ? null : window.supabase.createClient(ADMIN?.url || CONFIG.supabaseUrl, ADMIN?.serviceKey || CONFIG.anonKey, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
@@ -30,16 +31,21 @@ const friendly = (m) => (/fetch|network/i.test(m) ? "No connection. Check your i
 const ts = (v) => (v ? Date.parse(v) : 0);
 
 async function loadState() {
-  const [settings, polls, options, members, votes, plan] = await Promise.all([
+  const [settings, polls, options, members, votes, plan, vault, docs] = await Promise.all([
     sb.from("cq_settings").select("data").eq("id", 1).maybeSingle().then(ok),
     sb.from("cq_polls").select("*").order("sort").then(ok),
     sb.from("cq_options").select("*").order("sort").then(ok),
     sb.from("cq_members").select("*").order("joined_at").order("name").then(ok),
     sb.from("cq_votes").select("*").order("at").then(ok),
     sb.from("cq_plan").select("data").eq("id", 1).maybeSingle().then(ok),
+    // optional until the travel-info tables exist
+    sb.from("cq_vault").select("salt,chk,iv").eq("id", 1).maybeSingle().then((r) => (r.error || !r.data ? null : { salt: r.data.salt, check: r.data.chk, iv: r.data.iv })),
+    sb.from("cq_docs").select("*").then((r) => (r.error ? [] : r.data)),
   ]);
   return {
     plan: plan?.data || null,
+    vault: vault || null,
+    docs: docs.map((d) => ({ memberId: d.member_id, cipher: d.cipher, iv: d.iv, updatedAt: ts(d.updated_at) })),
     settings: settings?.data || {},
     polls: polls.map((p) => ({ id: p.id, title: p.title, subtitle: p.subtitle, multi: p.multi, sort: p.sort })),
     options: options.map((o) => ({
@@ -66,6 +72,16 @@ export async function vote(optionId, memberId, on) {
   ok(await sb.rpc("cq_vote", { p_option: optionId, p_member: memberId, p_on: on }));
 }
 
+// Travel details arrive already encrypted (see crypto.js); the backend only ever sees scrambled text.
+export async function saveDoc(memberId, cipher, iv) {
+  if (useLocal) return post("/api/doc", { memberId, cipher, iv });
+  ok(await sb.rpc("cq_save_doc", { p_member: memberId, p_cipher: cipher, p_iv: iv }));
+}
+export async function deleteDoc(memberId) {
+  if (useLocal) return post("/api/doc-delete", { memberId });
+  ok(await sb.rpc("cq_delete_doc", { p_member: memberId }));
+}
+
 // Calls onState with every new snapshot; keeps itself up to date.
 export function subscribe(onState, onStatus = () => {}) {
   if (useLocal) {
@@ -85,7 +101,7 @@ export function subscribe(onState, onStatus = () => {}) {
   };
   const soon = () => { clearTimeout(timer); timer = setTimeout(refresh, 120); };
   const ch = sb.channel("cq-" + Math.random().toString(36).slice(2));
-  for (const table of ["cq_settings", "cq_polls", "cq_options", "cq_members", "cq_votes", "cq_plan"]) {
+  for (const table of ["cq_settings", "cq_polls", "cq_options", "cq_members", "cq_votes", "cq_plan", "cq_vault", "cq_docs"]) {
     ch.on("postgres_changes", { event: "*", schema: "public", table }, soon);
   }
   ch.subscribe((status) => {
@@ -159,6 +175,10 @@ const adminActions = {
     const r = Number(s.rmPerCny);
     const data = { ...cur, tripName: clean(s.tripName, 40) || cur.tripName, dates: clean(s.dates, 60), rmPerCny: r > 0 && r < 10 ? r : cur.rmPerCny };
     ok(await sb.from("cq_settings").upsert({ id: 1, data }));
+  },
+  async setVault({ salt, check, iv }) {
+    ok(await sb.from("cq_docs").delete().neq("member_id", ""));
+    ok(await sb.from("cq_vault").upsert({ id: 1, salt, chk: check, iv }));
   },
   async savePlan(plan) {
     if (!plan || !Array.isArray(plan.days) || !Array.isArray(plan.trips)) throw new Error("That plan looks broken.");

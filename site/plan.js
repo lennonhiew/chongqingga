@@ -1,5 +1,5 @@
 // The Plan page: who's where, your cost, flights & trains, day by day.
-import { h, play, avatar, yuan, rollNumber, reduceMotion } from "./ui.js?v=8";
+import { h, play, avatar, yuan, rollNumber, reduceMotion } from "./ui.js?v=10";
 
 let imgSrc = (s) => s;
 

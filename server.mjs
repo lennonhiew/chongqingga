@@ -17,7 +17,18 @@ let db;
 try { db = JSON.parse(fs.readFileSync(DB_FILE, "utf8")); } catch { db = seed(); }
 applyPhotos();
 if (!db.plan) db.plan = buildPlan(db.options, db.polls);
+db.vault ??= null; // { salt, check, iv } — lets phones check the group code
+db.docs ??= [];    // { memberId, cipher, iv, updatedAt } — travel details, encrypted on the phone
 save();
+
+const b64ok = (s, max) => typeof s === "string" && s.length > 0 && s.length <= max && /^[A-Za-z0-9+/=]+$/.test(s);
+function saveDoc({ memberId, cipher, iv }) {
+  if (!db.vault) throw new Error("Travel info isn't set up yet.");
+  if (!db.members.some((m) => m.id === memberId)) throw new Error("That person isn't in the group.");
+  if (!b64ok(cipher, 8000) || !b64ok(iv, 40)) throw new Error("That didn't look encrypted.");
+  db.docs = db.docs.filter((d) => d.memberId !== memberId);
+  db.docs.push({ memberId, cipher, iv, updatedAt: Date.now() });
+}
 
 // Starter photos matched to places by name (site/img/credits.json).
 function applyPhotos(target = db) {
@@ -105,6 +116,13 @@ const adminActions = {
   removeMember({ id }) {
     db.members = db.members.filter((m) => m.id !== id);
     db.votes = db.votes.filter((v) => v.memberId !== id);
+    db.docs = db.docs.filter((d) => d.memberId !== id);
+  },
+  // New group code: old details can't be read with it, so they're cleared.
+  setVault({ salt, check, iv }) {
+    if (!b64ok(salt, 40) || !b64ok(check, 200) || !b64ok(iv, 40)) throw new Error("Bad lock.");
+    db.vault = { salt, check, iv };
+    db.docs = [];
   },
   saveSettings(s) {
     db.settings.tripName = clean(s.tripName, 40) || db.settings.tripName;
@@ -113,7 +131,7 @@ const adminActions = {
     if (r > 0 && r < 10) db.settings.rmPerCny = r;
   },
   clearVotes() { db.votes = []; },
-  resetAll() { db = seed(); applyPhotos(); db.plan = buildPlan(db.options, db.polls); },
+  resetAll() { db = seed(); applyPhotos(); db.plan = buildPlan(db.options, db.polls); db.vault = null; db.docs = []; },
   savePlan(plan) {
     if (!plan || !Array.isArray(plan.days) || !Array.isArray(plan.trips)) throw new Error("That plan looks broken.");
     db.plan = plan;
@@ -170,6 +188,13 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === "POST" && url.pathname === "/api/join") {
       const m = join((await body(req)).name); changed(); return send(res, 200, m);
+    }
+    if (req.method === "POST" && url.pathname === "/api/doc") {
+      saveDoc(await body(req)); changed(); return send(res, 200, { ok: true });
+    }
+    if (req.method === "POST" && url.pathname === "/api/doc-delete") {
+      const { memberId } = await body(req);
+      db.docs = db.docs.filter((d) => d.memberId !== memberId); changed(); return send(res, 200, { ok: true });
     }
     if (req.method === "POST" && url.pathname === "/api/vote") {
       vote(await body(req)); changed(); return send(res, 200, { ok: true });

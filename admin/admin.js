@@ -274,6 +274,33 @@ function viewFriends() {
 }
 
 // ---------- Settings ----------
+// Group code for the Info tab. Only a check value is stored; the code itself never leaves this PC.
+function codePanel() {
+  const isSet = !!state.vault;
+  const saved = (state.docs || []).length;
+  const code = h("input.field", { type: "text", placeholder: "e.g. hotpot-panda-2026", autocomplete: "off", spellcheck: "false" });
+  const again = h("input.field", { type: "text", placeholder: "Type it again", autocomplete: "off", spellcheck: "false" });
+  const err = h("p.form-err");
+  const apply = async () => {
+    err.textContent = "";
+    const c = code.value.trim();
+    if (c.length < 8) { err.textContent = "Use at least 8 characters. Three short words with dashes works well."; return; }
+    if (c.toLowerCase() !== again.value.trim().toLowerCase()) { err.textContent = "The two codes don't match."; return; }
+    const { makeVault } = await import("/site/crypto.js");
+    const vault = await makeVault(c);
+    if (await act("setVault", vault, isSet ? "New code set. Everyone needs to re-add their details." : "Travel info is on. Share the code in Telegram.")) { code.value = ""; again.value = ""; }
+  };
+  const go = () => (isSet && saved
+    ? confirmSheet("Change the group code?", `The ${saved} saved ${saved === 1 ? "person's details" : "people's details"} can't be opened with a new code, so they'll be deleted and everyone adds them again.`, "Change code", apply)
+    : apply());
+  return h("div.panel",
+    h("div.panel-head", h("h2", "Travel info code"), h("span.tag", isSet ? `On, ${saved} added` : "Off")),
+    h("p", { style: { color: "var(--text-2)", fontSize: "14px", marginBottom: "12px", lineHeight: 1.45 } },
+      "Friends type this code on the Info tab to see passport and IC details. Details are encrypted on each phone with it, so nobody without the code (not even Supabase) can read them. The code is never stored, so write it down and share it in the Telegram group."),
+    h("div.form.settings", h("div.row2", h("label", isSet ? "New code" : "Code", code), h("label", "Confirm", again)), err,
+      h("div.form-actions", { style: { justifyContent: "flex-start" } }, h("button.btn.pressable", { onclick: go }, isSet ? "Change code" : "Turn on travel info"))));
+}
+
 function viewSettings() {
   const s = state.settings;
   const name = h("input.field", { value: s.tripName });
@@ -287,6 +314,7 @@ function viewSettings() {
         h("label", "Dates", dates),
         h("label", "Ringgit per ¥1 (for the RM prices)", rateIn),
         h("div.form-actions", { style: { justifyContent: "flex-start" } }, h("button.btn.pressable", { onclick: () => act("saveSettings", { tripName: name.value, dates: dates.value, rmPerCny: rateIn.value }, "Settings saved") }, "Save")))),
+    codePanel(),
     h("div.panel.danger-zone",
       h("h2", { style: { fontSize: "18px" } }, "Start over"),
       h("p", "Clear votes keeps the places and friends. Reset puts back the starter places from the itinerary."),
