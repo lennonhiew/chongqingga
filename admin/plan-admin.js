@@ -169,16 +169,23 @@ export function viewPlan({ state, admin, confirmSheet, iconBtn }) {
     const whoChoices = { all: "Everyone", ...Object.fromEntries(plan.groups.map((g) => [g.id, g.name + " only"])) };
     const list = h("div.item-rows");
     const itemRow = (it = { kind: "place" }) => {
-      const time = input(it.time, { placeholder: "Morning / 09:00", "aria-label": "Time" });
+      const time = input(it.time, { placeholder: "09:00", "aria-label": "Time (24 h, China time)" });
+      const pin = input(it.at ? it.at.join(", ") : "", { placeholder: "Map pin: lat, lng from Amap (optional)", "aria-label": "Map pin" });
       const kind = select(it.kind || "place", KINDS);
       const text = input(it.text, { placeholder: "What happens", "aria-label": "Text" });
       const place = select(it.optionId || "", placeChoices);
       const poll = select(it.pollId || state.polls[0]?.id, pollChoices);
       const whoSel = select(it.groups?.length && !it.groups.includes("all") ? it.groups[0] : "all", whoChoices);
-      const sync = () => { place.hidden = kind.value !== "place"; poll.hidden = kind.value !== "vote"; text.placeholder = kind.value === "place" ? "Name (leave empty to use the place's)" : "What happens"; };
+      const sync = () => {
+        place.hidden = kind.value !== "place"; poll.hidden = kind.value !== "vote";
+        text.placeholder = kind.value === "place" ? "Name (leave empty to use the place's)" : "What happens";
+        const auto = kind.value === "place" && plan.geo?.[place.value];
+        pin.placeholder = auto ? `Map pin: ${auto.join(", ")} (from the place)` : "Map pin: lat, lng from Amap (optional)";
+      };
+      place.addEventListener("change", sync);
       kind.addEventListener("change", sync);
       place.addEventListener("change", () => { if (!text.value) text.value = state.options.find((o) => o.id === place.value)?.name || ""; });
-      const row = h("div.irow", time, kind, h("div.icol", text, place, poll), whoSel,
+      const row = h("div.irow", time, kind, h("div.icol", text, place, poll, pin), whoSel,
         h("span.tools",
           h("button.icon-btn", { type: "button", title: "Up", html: '<svg viewBox="0 0 20 20"><path d="M5 12l5-5 5 5"/></svg>', onclick: () => row.previousElementSibling?.before(row) }),
           h("button.icon-btn", { type: "button", title: "Down", html: '<svg viewBox="0 0 20 20"><path d="M5 8l5 5 5-5"/></svg>', onclick: () => row.nextElementSibling?.after(row) }),
@@ -189,6 +196,8 @@ export function viewPlan({ state, admin, confirmSheet, iconBtn }) {
         if (k === "place") out.optionId = place.value;
         if (k === "vote") out.pollId = poll.value;
         if (whoSel.value !== "all") out.groups = [whoSel.value];
+        const ll = pin.value.match(/(-?\d+(?:\.\d+)?)\s*[,，\s]\s*(-?\d+(?:\.\d+)?)/);
+        if (ll) { let [a, b] = [+ll[1], +ll[2]]; if (a > 90) [a, b] = [b, a]; out.at = [a, b]; } // Amap copies "lng,lat"; flip if needed
         return out;
       };
       sync();

@@ -1,5 +1,7 @@
 // The Plan page: who's where, your cost, flights & trains, day by day.
-import { h, play, avatar, yuan, rollNumber, reduceMotion } from "./ui.js?v=11";
+import { h, play, avatar, yuan, rollNumber, reduceMotion } from "./ui.js?v=12";
+import { mountClock } from "./now.js?v=12";
+import { weather, cityFor } from "./trip.js?v=12";
 
 let imgSrc = (s) => s;
 
@@ -99,12 +101,13 @@ function build(root, ctx, which) {
   }
 
   // ---------- Itinerary (its own tab) ----------
-  if (which === "itin") sections.push(h("section.plan-sec",
+  const clockHost = h("div.clock-host");
+  if (which === "itin") sections.push(clockHost, h("section.plan-sec",
     h("h2.sec-title", "Itinerary"),
     h("div.days", (plan.days || []).slice().sort((a, b) => a.date.localeCompare(b.date)).map((d) => {
       const dayForMe = forGroup(d.groups, myGroup) || !myGroup;
       const range = d.endDate && d.endDate !== d.date;
-      return h("article.day", { class: `day ${dayForMe ? "" : "not-mine"}` },
+      return h("article.day", { class: `day ${dayForMe ? "" : "not-mine"}`, "data-date": d.date, "data-end": d.endDate || null, "data-city": d.city },
         h("div.day-date",
           h("span.dow", range ? fmt(d.date, { weekday: "short" }) + "–" + fmt(d.endDate, { weekday: "short" }) : fmt(d.date, { weekday: "short" })),
           h("span.dnum", range ? `${D(d.date).getDate()}–${D(d.endDate).getDate()}` : D(d.date).getDate()),
@@ -114,7 +117,7 @@ function build(root, ctx, which) {
             h("span.city-chip", { class: `city-chip ${cityTone(d.city)}` }, d.city),
             d.groups?.length && !d.groups.includes("all") ? h("span.who-tag", groupLabel(d.groups)) : null),
           h("h3", d.title),
-          h("ul.items", (d.items || []).map((it) => itemRow(it, { mine: forGroup(it.groups, myGroup) || !myGroup, label: groupLabel(it.groups), state, votesFor, ctx })))));
+          h("ul.items", (d.items || []).map((it, i) => itemRow(it, { key: `${d.date}#${i}`, mine: forGroup(it.groups, myGroup) || !myGroup, label: groupLabel(it.groups), state, votesFor, ctx })))));
     }))));
 
   sections.push(h("p.foot", which === "plan"
@@ -122,6 +125,14 @@ function build(root, ctx, which) {
     : "Leon keeps the itinerary up to date, and it updates live. Tap a place to see it in Vote."));
 
   root.replaceChildren(...sections);
+  if (which === "itin") {
+    mountClock(clockHost, root, ctx);
+    weather().then((w) => root.querySelectorAll(".day[data-date]").forEach((el) => {
+      const f = w?.[cityFor(el.dataset.city)]?.days?.[el.dataset.date];
+      if (f && !el.querySelector(".wx")) el.querySelector(".day-head").append(h("span.wx", `${f.icon} ${f.lo}–${f.hi}°`));
+    }));
+    return;
+  }
   if (which !== "plan") return;
 
   if (firstRender && !reduceMotion.matches) {
@@ -160,7 +171,7 @@ function tripCard(t, i, { mine, label, people, faces }) {
     t.bag || t.note ? h("p.trip-note", [t.bag ? "🧳 " + t.bag : "", t.note].filter(Boolean).join(". ")) : null);
 }
 
-function itemRow(it, { mine, label, state, votesFor, ctx }) {
+function itemRow(it, { key, mine, label, state, votesFor, ctx }) {
   let lead = h("span.ic", KIND_ICON[it.kind] || "•");
   let main = h("span.tx", it.text);
   let action = null;
@@ -184,6 +195,7 @@ function itemRow(it, { mine, label, state, votesFor, ctx }) {
   if (!mine || (it.groups?.length && !it.groups.includes("all"))) main.append(h("span.who-tag.sm", label));
   const row = h(action ? "li.item.tap" : "li.item", { class: `item ${action ? "tap" : ""} ${mine ? "" : "not-mine"} kind-${it.kind}` },
     h("span.t", it.time || ""), lead, main);
+  row.dataset.k = key;
   if (action) {
     row.setAttribute("role", "button");
     row.tabIndex = 0;

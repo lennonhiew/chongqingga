@@ -1,7 +1,8 @@
-import { getState, join, vote, subscribe, imgSrc, saveDoc, deleteDoc } from "./api.js?v=11";
-import { h, $, play, avatar, WHEN, WHEN_ORDER, yuan, ringgit, rollNumber, openSheet, toast, reduceMotion } from "./ui.js?v=11";
-import { renderPlan, renderItinerary } from "./plan.js?v=11";
-import { renderInfo } from "./info.js?v=11";
+import { getState, join, vote, subscribe, imgSrc, saveDoc, deleteDoc } from "./api.js?v=12";
+import { h, $, play, avatar, WHEN, WHEN_ORDER, yuan, ringgit, rollNumber, openSheet, toast, reduceMotion } from "./ui.js?v=12";
+import { renderPlan, renderItinerary } from "./plan.js?v=12";
+import { renderInfo } from "./info.js?v=12";
+import { renderMap, showMap } from "./map.js?v=12";
 
 // ---------- Loading splash ----------
 const splashShownAt = performance.now();
@@ -42,9 +43,10 @@ function renderHero() {
 }
 
 // ---------- Pages (bottom tab bar) ----------
-const PAGES = ["plan", "itinerary", "vote", "info"];
+const PAGES = ["plan", "itinerary", "map", "vote", "info"];
 let page = PAGES.includes(location.hash.slice(1)) ? location.hash.slice(1) : "plan";
 const scrollMemo = { plan: 0, vote: 0 };
+let mapOpts = null;
 
 function showPage(next, { animate = true } = {}) {
   const prev = page;
@@ -55,6 +57,7 @@ function showPage(next, { animate = true } = {}) {
   document.querySelectorAll("#tabbar .tab").forEach((t) => (t.dataset.page === next ? t.setAttribute("aria-current", "page") : t.removeAttribute("aria-current")));
   if (state) updateTray();
   if (next === "vote") requestAnimationFrame(() => movePill(false));
+  if (next === "map") showMap(mapOpts), (mapOpts = null);
   if (next !== prev) {
     scrollTo(0, scrollMemo[next] || 0);
     if (animate) {
@@ -81,12 +84,16 @@ const planCtx = () => ({
       setTimeout(() => play(el, [{ transform: "scale(1)" }, { transform: "scale(1.03)" }, { transform: "scale(1)" }], { damping: 0.6, response: 0.5 }), 450);
     });
   },
+  openMap(opts) {
+    mapOpts = opts;
+    if (page === "map") showMap(mapOpts), (mapOpts = null); else showPage("map");
+  },
   openPoll(pollId) {
     showPage("vote");
     if (activePoll !== pollId) selectPoll(pollId);
   },
 });
-const drawPlan = () => { const c = planCtx(); renderPlan($("#pagePlan"), c); renderItinerary($("#pageItinerary"), c); drawInfo(); };
+const drawPlan = () => { const c = planCtx(); renderPlan($("#pagePlan"), c); renderItinerary($("#pageItinerary"), c); renderMap($("#pageMap"), c); drawInfo(); };
 const drawInfo = () => state && renderInfo($("#pageInfo"), { state, me, api: { saveDoc, deleteDoc } });
 
 // ---------- Tabs ----------
