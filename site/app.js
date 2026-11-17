@@ -1,7 +1,7 @@
-import { getState, join, vote, subscribe, imgSrc, saveDoc, deleteDoc } from "./api.js?v=10";
-import { h, $, play, avatar, WHEN, WHEN_ORDER, yuan, ringgit, rollNumber, openSheet, toast, reduceMotion } from "./ui.js?v=10";
-import { renderPlan } from "./plan.js?v=10";
-import { renderInfo } from "./info.js?v=10";
+import { getState, join, vote, subscribe, imgSrc, saveDoc, deleteDoc } from "./api.js?v=11";
+import { h, $, play, avatar, WHEN, WHEN_ORDER, yuan, ringgit, rollNumber, openSheet, toast, reduceMotion } from "./ui.js?v=11";
+import { renderPlan, renderItinerary } from "./plan.js?v=11";
+import { renderInfo } from "./info.js?v=11";
 
 // ---------- Loading splash ----------
 const splashShownAt = performance.now();
@@ -42,7 +42,7 @@ function renderHero() {
 }
 
 // ---------- Pages (bottom tab bar) ----------
-const PAGES = ["plan", "vote", "info"];
+const PAGES = ["plan", "itinerary", "vote", "info"];
 let page = PAGES.includes(location.hash.slice(1)) ? location.hash.slice(1) : "plan";
 const scrollMemo = { plan: 0, vote: 0 };
 
@@ -86,7 +86,7 @@ const planCtx = () => ({
     if (activePoll !== pollId) selectPoll(pollId);
   },
 });
-const drawPlan = () => { renderPlan($("#pagePlan"), planCtx()); drawInfo(); };
+const drawPlan = () => { const c = planCtx(); renderPlan($("#pagePlan"), c); renderItinerary($("#pageItinerary"), c); drawInfo(); };
 const drawInfo = () => state && renderInfo($("#pageInfo"), { state, me, api: { saveDoc, deleteDoc } });
 
 // ---------- Tabs ----------

@@ -228,7 +228,7 @@
 
 .foot { margin: 28px 8px 0; font-size: 13px; color: var(--text-3); text-align: center; }
 
-/* Bottom tab bar (Plan / Vote) */
+/* Bottom tab bar (Plan / Itinerary / Vote / Info) */
 .tabbar {
   position: fixed;
   z-index: 35;
@@ -236,7 +236,7 @@
   right: 0;
   bottom: 0;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   max-width: 100%;
   padding: 6px max(16px, calc(50% - 200px)) calc(6px + env(safe-area-inset-bottom));
   background: var(--material);

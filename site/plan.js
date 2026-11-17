@@ -1,5 +1,5 @@
 // The Plan page: who's where, your cost, flights & trains, day by day.
-import { h, play, avatar, yuan, rollNumber, reduceMotion } from "./ui.js?v=10";
+import { h, play, avatar, yuan, rollNumber, reduceMotion } from "./ui.js?v=11";
 
 let imgSrc = (s) => s;
 
@@ -12,7 +12,10 @@ const cityTone = (c = "") => (/chongqing/i.test(c) && !/chengdu/i.test(c) ? "cq"
 
 let firstRender = true;
 
-export function renderPlan(root, ctx) {
+export const renderPlan = (root, ctx) => build(root, ctx, "plan");
+export const renderItinerary = (root, ctx) => build(root, ctx, "itin");
+
+function build(root, ctx, which) {
   const { state, me } = ctx;
   imgSrc = ctx.imgSrc;
   const plan = state.plan;
@@ -29,6 +32,7 @@ export function renderPlan(root, ctx) {
 
   const sections = [];
 
+  if (which === "plan") {
   // ---------- Who's where ----------
   // Bars cover the days the groups are travelling together; anything before (the camp) becomes a note.
   const stays = groups.flatMap((g) => g.stays || []);
@@ -92,10 +96,11 @@ export function renderPlan(root, ctx) {
   sections.push(h("section.plan-sec",
     h("h2.sec-title", "Flights & trains"),
     h("div.trips", trips.map((t, i) => tripCard(t, i, { mine: forGroup(t.groups, myGroup) && !!myGroup, label: groupLabel(t.groups), people: groupPeople(t.groups), faces })))));
+  }
 
-  // ---------- Day by day ----------
-  sections.push(h("section.plan-sec",
-    h("h2.sec-title", "Day by day"),
+  // ---------- Itinerary (its own tab) ----------
+  if (which === "itin") sections.push(h("section.plan-sec",
+    h("h2.sec-title", "Itinerary"),
     h("div.days", (plan.days || []).slice().sort((a, b) => a.date.localeCompare(b.date)).map((d) => {
       const dayForMe = forGroup(d.groups, myGroup) || !myGroup;
       const range = d.endDate && d.endDate !== d.date;
@@ -112,9 +117,12 @@ export function renderPlan(root, ctx) {
           h("ul.items", (d.items || []).map((it) => itemRow(it, { mine: forGroup(it.groups, myGroup) || !myGroup, label: groupLabel(it.groups), state, votesFor, ctx })))));
     }))));
 
-  sections.push(h("p.foot", "Leon keeps this plan up to date, and it updates live. Prices from Trip.com on 16 Nov, tax included."));
+  sections.push(h("p.foot", which === "plan"
+    ? "Leon keeps this plan up to date, and it updates live. Flight prices checked on Trip.com, Airpaz and Agoda on 18 Nov, tax included."
+    : "Leon keeps the itinerary up to date, and it updates live. Tap a place to see it in Vote."));
 
   root.replaceChildren(...sections);
+  if (which !== "plan") return;
 
   if (firstRender && !reduceMotion.matches) {
     // One orchestrated moment: the stay bars grow in, row by row.
