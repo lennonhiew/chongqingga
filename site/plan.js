@@ -1,7 +1,8 @@
 // The Plan page: who's where, your cost, flights & trains, day by day.
-import { h, play, avatar, yuan, rollNumber, reduceMotion } from "./ui.js?v=12";
-import { mountClock } from "./now.js?v=12";
-import { weather, cityFor } from "./trip.js?v=12";
+import { h, play, avatar, yuan, rollNumber, reduceMotion } from "./ui.js?v=13";
+import { mountClock, liveStatus } from "./now.js?v=13";
+import { weather, cityFor, dateOf, now as nowMs } from "./trip.js?v=13";
+import { icon } from "./icons.js?v=13";
 
 let imgSrc = (s) => s;
 
@@ -102,23 +103,37 @@ function build(root, ctx, which) {
 
   // ---------- Itinerary (its own tab) ----------
   const clockHost = h("div.clock-host");
-  if (which === "itin") sections.push(clockHost, h("section.plan-sec",
-    h("h2.sec-title", "Itinerary"),
-    h("div.days", (plan.days || []).slice().sort((a, b) => a.date.localeCompare(b.date)).map((d) => {
+  if (which === "itin") {
+    const days = (plan.days || []).slice().sort((a, b) => a.date.localeCompare(b.date));
+    const dayCard = (d, extra = "") => {
       const dayForMe = forGroup(d.groups, myGroup) || !myGroup;
       const range = d.endDate && d.endDate !== d.date;
-      return h("article.day", { class: `day ${dayForMe ? "" : "not-mine"}`, "data-date": d.date, "data-end": d.endDate || null, "data-city": d.city },
+      return h("article.day", { class: `day ${dayForMe ? "" : "not-mine"} ${extra}`, "data-date": d.date, "data-end": d.endDate || null, "data-city": d.city },
         h("div.day-date",
           h("span.dow", range ? fmt(d.date, { weekday: "short" }) + "–" + fmt(d.endDate, { weekday: "short" }) : fmt(d.date, { weekday: "short" })),
           h("span.dnum", range ? `${D(d.date).getDate()}–${D(d.endDate).getDate()}` : D(d.date).getDate()),
           h("span.mon", fmt(d.date, { month: "short" }))),
         h("div.day-card",
           h("div.day-head",
+            extra.includes("is-today") ? h("span.today-tag", "Today") : null,
             h("span.city-chip", { class: `city-chip ${cityTone(d.city)}` }, d.city),
             d.groups?.length && !d.groups.includes("all") ? h("span.who-tag", groupLabel(d.groups)) : null),
           h("h3", d.title),
           h("ul.items", (d.items || []).map((it, i) => itemRow(it, { key: `${d.date}#${i}`, mine: forGroup(it.groups, myGroup) || !myGroup, label: groupLabel(it.groups), state, votesFor, ctx })))));
-    }))));
+    };
+    // During the trip, earlier days fold away so today's card sits right under the clock.
+    const live = liveStatus(ctx).main?.st.phase === "during";
+    const today = dateOf(nowMs());
+    const isToday = (d) => d.date <= today && today <= (d.endDate || d.date);
+    const past = live ? days.filter((d) => (d.endDate || d.date) < today) : [];
+    const rest = days.filter((d) => !past.includes(d));
+    sections.push(clockHost, h("section.plan-sec",
+      h("h2.sec-title", "Itinerary"),
+      past.length ? h("details.earlier",
+        h("summary", h("span", `Earlier days`), h("span.earlier-n", `${past.length} day${past.length === 1 ? "" : "s"}, ${fmt(past[0].date, { day: "numeric", month: "short" })} – ${fmt(past.at(-1).endDate || past.at(-1).date, { day: "numeric", month: "short" })}`)),
+        h("div.days", past.map((d) => dayCard(d, "is-done")))) : null,
+      h("div.days", rest.map((d) => dayCard(d, live && isToday(d) ? "is-today" : "")))));
+  }
 
   sections.push(h("p.foot", which === "plan"
     ? "Leon keeps this plan up to date, and it updates live. Flight prices checked on Trip.com, Airpaz and Agoda on 18 Nov, tax included."
@@ -129,7 +144,7 @@ function build(root, ctx, which) {
     mountClock(clockHost, root, ctx);
     weather().then((w) => root.querySelectorAll(".day[data-date]").forEach((el) => {
       const f = w?.[cityFor(el.dataset.city)]?.days?.[el.dataset.date];
-      if (f && !el.querySelector(".wx")) el.querySelector(".day-head").append(h("span.wx", `${f.icon} ${f.lo}–${f.hi}°`));
+      if (f && !el.querySelector(".wx")) el.querySelector(".day-head").append(h("span.wx", icon(f.icon), `${f.lo}–${f.hi}°`));
     }));
     return;
   }
@@ -180,7 +195,8 @@ function itemRow(it, { key, mine, label, state, votesFor, ctx }) {
     if (o) {
       const n = votesFor(o.id).length;
       lead = o.image ? h("img.thumb", { src: imgSrc(o.image), alt: "", loading: "lazy" }) : h("span.ic", o.emoji || "📍");
-      main = h("span.tx", it.text || o.name, h("small", n ? `${n} vote${n === 1 ? "" : "s"}` : "No votes yet", o.priceCny ? `, ${yuan(o.priceCny)}` : ""));
+      const en = it.text || o.name;
+      main = h("span.tx", o.zh || en, h("small", [o.zh ? en : "", n ? `${n} vote${n === 1 ? "" : "s"}` : "No votes yet", o.priceCny ? yuan(o.priceCny) : ""].filter(Boolean).join(" · ")));
       action = () => ctx.openPlace(o.id);
     }
   } else if (it.kind === "vote" && it.pollId) {
@@ -188,7 +204,7 @@ function itemRow(it, { key, mine, label, state, votesFor, ctx }) {
     const top = opts[0];
     if (top && top.n > 0) {
       lead = top.o.image ? h("img.thumb", { src: imgSrc(top.o.image), alt: "", loading: "lazy" }) : h("span.ic", top.o.emoji);
-      main = h("span.tx", top.o.name, h("small", `Winning the vote with ${top.n}. Tap to vote.`));
+      main = h("span.tx", top.o.zh || top.o.name, h("small", [top.o.zh ? top.o.name : "", `winning with ${top.n} votes, tap to vote`].filter(Boolean).join(" · ")));
     } else main = h("span.tx", it.text, h("small", "No votes yet. Tap to vote."));
     action = () => ctx.openPoll(it.pollId);
   }

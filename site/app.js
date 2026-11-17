@@ -1,8 +1,8 @@
-import { getState, join, vote, subscribe, imgSrc, saveDoc, deleteDoc } from "./api.js?v=12";
-import { h, $, play, avatar, WHEN, WHEN_ORDER, yuan, ringgit, rollNumber, openSheet, toast, reduceMotion } from "./ui.js?v=12";
-import { renderPlan, renderItinerary } from "./plan.js?v=12";
-import { renderInfo } from "./info.js?v=12";
-import { renderMap, showMap } from "./map.js?v=12";
+import { getState, join, vote, subscribe, imgSrc, saveDoc, deleteDoc } from "./api.js?v=13";
+import { h, $, play, avatar, WHEN, WHEN_ORDER, yuan, ringgit, rollNumber, openSheet, toast, reduceMotion } from "./ui.js?v=13";
+import { renderPlan, renderItinerary } from "./plan.js?v=13";
+import { renderInfo } from "./info.js?v=13";
+import { renderMap, showMap } from "./map.js?v=13";
 
 // ---------- Loading splash ----------
 const splashShownAt = performance.now();
@@ -84,6 +84,7 @@ const planCtx = () => ({
       setTimeout(() => play(el, [{ transform: "scale(1)" }, { transform: "scale(1.03)" }, { transform: "scale(1)" }], { damping: 0.6, response: 0.5 }), 450);
     });
   },
+  refresh: () => drawPlan(),
   openMap(opts) {
     mapOpts = opts;
     if (page === "map") showMap(mapOpts), (mapOpts = null); else showPage("map");
@@ -173,7 +174,7 @@ function optionCard(o, poll) {
   },
     photo || h("span.emoji", { "aria-hidden": "true" }, o.emoji || "📍"),
     h("span.opt-body",
-      h("span.opt-name", photo && o.emoji ? h("span.opt-emoji", { "aria-hidden": "true" }, o.emoji) : null, o.name, o.zh ? h("span.opt-zh", o.zh) : null),
+      h("span.opt-name", photo && o.emoji ? h("span.opt-emoji", { "aria-hidden": "true" }, o.emoji) : null, o.zh || o.name, o.zh ? h("span.opt-zh", o.name) : null),
       h("span.opt-meta",
         h("span.when", { class: `when ${o.when}` }, when.icon, " ", when.label),
         h("span.price", { class: o.priceCny ? "price" : "price free" }, yuan(o.priceCny), o.priceCny ? h("span.rm", "≈ " + ringgit(o.priceCny, rate())) : null)),
@@ -308,7 +309,7 @@ function showPlan() {
       h("h3", p.title, h("small", yuan(items.reduce((s, o) => s + o.priceCny, 0)))),
       h("ul.plan-list", items.map((o) => h("li",
         o.image ? h("img.thumb", { src: imgSrc(o.image), alt: "", loading: "lazy" }) : h("span.e", o.emoji),
-        h("span.n", o.name, h("small", `${WHEN[o.when]?.icon || ""} ${WHEN[o.when]?.label || ""}`)),
+        h("span.n", o.zh || o.name, h("small", [o.zh ? o.name : "", `${WHEN[o.when]?.icon || ""} ${WHEN[o.when]?.label || ""}`].filter(Boolean).join(" · "))),
         h("span.p", yuan(o.priceCny))))))) : h("p.plan-empty", "Nothing yet. Tap the places you want to go and they'll show up here."),
     groups.length ? h("div.plan-total", h("span", "Tickets total"), h("span", h("b", yuan(total)), "  ", ringgit(total, rate()))) : null);
   openSheet(content);

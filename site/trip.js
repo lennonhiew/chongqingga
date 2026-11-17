@@ -55,6 +55,7 @@ export function timeline(plan, state, g) {
       out.push({
         key: `${d.date}#${i}`, day: d, item: it, start, end: null, opt, kind: it.kind, range: !!d.endDate,
         title: it.text || opt?.name || "",
+        zh: opt?.zh || "",
         geo: it.at || (it.optionId && plan.geo?.[it.optionId]) || null,
       });
     });
@@ -104,15 +105,26 @@ export function km([la1, lo1], [la2, lo2]) {
 }
 const round5 = (m) => Math.max(5, Math.round(m / 5) * 5);
 // Rough door-to-door guesses for hilly Chongqing / flat Chengdu. Amap has the real ones.
+// Metro = walk to the station + wait + ride; short hops still get a number so every option shows.
 export function legs(a, b) {
   const d = km(a, b), road = d * 1.4;
   return {
     km: d,
-    walk: road <= 5 ? round5((road / 4.5) * 60) : null,
-    metro: d >= 1.2 && d <= 45 ? round5(10 + (road / 30) * 60) : null,
+    walk: road <= 12 ? round5((road / 4.5) * 60) : null,
+    metro: d <= 60 ? round5(12 + (road / 30) * 60) : null,
     car: round5(5 + (road / (d > 20 ? 60 : 22)) * 60),
   };
 }
+export const fastest = (l) => ["walk", "metro", "car"].filter((k) => l[k] != null).sort((x, y) => l[x] - l[y])[0];
+
+// Chinese first: 洪崖洞 big, Hongyadong small.
+export const names = (e) => (e.zh ? { main: e.zh, sub: e.title } : { main: e.title, sub: "" });
+
+// ---------- Hotels: plan.hotels = [{ name, zh, at: [lat, lng], from, to, groups }] (from = check-in, to = check-out) ----------
+export const hotels = (plan, g) => (plan?.hotels || []).filter((x) => x.at && forGroup(x.groups, g));
+// Where you sleep on the night of `date`, and where you woke up that morning.
+export const hotelNight = (plan, g, date) => hotels(plan, g).find((x) => x.from <= date && date < x.to) || null;
+export const hotelMorning = (plan, g, date) => hotels(plan, g).find((x) => x.from < date && date <= x.to) || null;
 export const mins = (m) => (m == null ? "–" : m < 60 ? `${m} min` : `${Math.floor(m / 60)} h${m % 60 ? " " + (m % 60) : ""}`);
 export const dist = (d) => (d < 1 ? `${Math.round(d * 100) * 10} m` : `${d < 10 ? d.toFixed(1) : Math.round(d)} km`);
 
@@ -135,22 +147,23 @@ export function wgs2gcj(lat, lng) {
 
 // ---------- Weather (Open-Meteo, no key) ----------
 const CITIES = { Chongqing: [29.56, 106.55], Chengdu: [30.66, 104.07], Hangzhou: [30.27, 120.15], Wenzhou: [28.0, 120.67] };
-export const CLIMATE = "Late Dec is cold and damp: Chongqing about 6–11°C, Chengdu 3–10°C, Zhejiang 3–11°C. Bring layers.";
+export const CLIMATE = "Late December is cold and damp: Chongqing 6–11°C, Chengdu 3–10°C, Zhejiang 3–11°C. Bring layers";
 export const cityFor = (s = "") => (/chengdu/i.test(s) && !/^chongqing/i.test(s) ? "Chengdu" : /chongqing/i.test(s) ? "Chongqing" : /wenzhou/i.test(s) ? "Wenzhou" : /hangzhou|zhejiang|camp|yiwu/i.test(s) ? "Hangzhou" : null);
-const ICON = (c) => (c === 0 ? "☀️" : c <= 2 ? "🌤️" : c === 3 ? "☁️" : c <= 48 ? "🌫️" : c <= 67 || (c >= 80 && c <= 82) ? "🌧️" : c <= 77 || c >= 85 && c <= 86 ? "🌨️" : "⛈️");
+// Weather code -> icon name in icons.js
+const ICON = (c) => (c === 0 ? "sun" : c <= 2 ? "partly" : c === 3 ? "cloud" : c <= 48 ? "fog" : c <= 67 || (c >= 80 && c <= 82) ? "rain" : c <= 77 || (c >= 85 && c <= 86) ? "snow" : "storm");
 let weatherP = null;
 export function weather() {
   if (weatherP) return weatherP;
-  const KEY = "cq-weather";
+  const KEY = "cq-weather2";
   try { const c = JSON.parse(localStorage.getItem(KEY)); if (c && Date.now() - c.at < 3 * 3600e3) return (weatherP = Promise.resolve(c.data)); } catch {}
-  const names = Object.keys(CITIES);
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${names.map((n) => CITIES[n][0]).join(",")}&longitude=${names.map((n) => CITIES[n][1]).join(",")}&daily=weather_code,temperature_2m_max,temperature_2m_min&current=temperature_2m,weather_code&timezone=Asia%2FShanghai&forecast_days=16`;
+  const cities = Object.keys(CITIES);
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${cities.map((n) => CITIES[n][0]).join(",")}&longitude=${cities.map((n) => CITIES[n][1]).join(",")}&daily=weather_code,temperature_2m_max,temperature_2m_min&current=temperature_2m,weather_code&timezone=Asia%2FShanghai&forecast_days=16`;
   weatherP = fetch(url).then((r) => r.json()).then((j) => {
     const data = {};
     [].concat(j).forEach((c, i) => {
       const days = {};
       c.daily.time.forEach((d, k) => (days[d] = { icon: ICON(c.daily.weather_code[k]), hi: Math.round(c.daily.temperature_2m_max[k]), lo: Math.round(c.daily.temperature_2m_min[k]) }));
-      data[names[i]] = { days, now: { icon: ICON(c.current.weather_code), t: Math.round(c.current.temperature_2m) } };
+      data[cities[i]] = { days, now: { icon: ICON(c.current.weather_code), t: Math.round(c.current.temperature_2m) } };
     });
     try { localStorage.setItem(KEY, JSON.stringify({ at: Date.now(), data })); } catch {}
     return data;
@@ -166,7 +179,7 @@ export function ics(events, tripName) {
   for (const e of events) {
     if (e.range) continue;
     lines.push("BEGIN:VEVENT", `UID:${e.key.replace("#", "-")}@chongqingga`, `DTSTAMP:${icsTime(Date.now())}`, `DTSTART:${icsTime(e.start)}`, `DTEND:${icsTime(Math.max(e.end, e.start + 30 * 60e3))}`,
-      `SUMMARY:${esc(e.title)}`, `DESCRIPTION:${esc(`${e.day.city}. ${e.day.title}`)}`);
+      `SUMMARY:${esc(e.zh ? `${e.zh} ${e.title}` : e.title)}`, `DESCRIPTION:${esc(`${e.day.city}. ${e.day.title}`)}`);
     if (e.geo) lines.push(`LOCATION:${esc(e.opt?.zh || e.title)}`);
     lines.push("BEGIN:VALARM", "TRIGGER:-PT30M", "ACTION:DISPLAY", `DESCRIPTION:${esc(e.title)}`, "END:VALARM", "END:VEVENT");
   }
