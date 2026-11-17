@@ -26,7 +26,10 @@ language plpgsql security definer set search_path = public as $$
 begin
   if not exists (select 1 from public.cq_vault) then raise exception 'Travel info isn''t set up yet.'; end if;
   if not exists (select 1 from public.cq_members where id = p_member) then raise exception 'That person isn''t in the group.'; end if;
-  if p_cipher !~ '^[A-Za-z0-9+/=]{1,8000}$' or p_iv !~ '^[A-Za-z0-9+/=]{1,40}$' then raise exception 'That didn''t look encrypted.'; end if;
+  -- Postgres regex repeat counts max out at 255, so check length separately.
+  if p_cipher is null or p_iv is null
+     or length(p_cipher) not between 1 and 8000 or length(p_iv) not between 1 and 40
+     or p_cipher !~ '^[A-Za-z0-9+/=]+$' or p_iv !~ '^[A-Za-z0-9+/=]+$' then raise exception 'That didn''t look encrypted.'; end if;
   insert into public.cq_docs (member_id, cipher, iv, updated_at) values (p_member, p_cipher, p_iv, now())
   on conflict (member_id) do update set cipher = excluded.cipher, iv = excluded.iv, updated_at = now();
 end $$;
