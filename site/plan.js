@@ -1,8 +1,8 @@
 // The Plan page: who's where, your cost, flights & trains, day by day.
-import { h, play, avatar, yuan, rollNumber, reduceMotion } from "./ui.js?v=13";
-import { mountClock, liveStatus } from "./now.js?v=13";
-import { weather, cityFor, dateOf, now as nowMs } from "./trip.js?v=13";
-import { icon } from "./icons.js?v=13";
+import { h, play, avatar, yuan, rollNumber, reduceMotion } from "./ui.js?v=14";
+import { mountClock, liveStatus } from "./now.js?v=14";
+import { weather, cityFor, dateOf, now as nowMs } from "./trip.js?v=14";
+import { icon } from "./icons.js?v=14";
 
 let imgSrc = (s) => s;
 

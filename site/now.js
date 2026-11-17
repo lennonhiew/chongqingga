@@ -1,8 +1,8 @@
 // The live card at the top of Itinerary: a clock, a countdown to your flight,
 // and during the trip "Now" and "Next" with travel times. Also marks the matching rows in the list.
-import { h, play, reduceMotion } from "./ui.js?v=13";
-import { icon } from "./icons.js?v=13";
-import * as T from "./trip.js?v=13";
+import { h, play, reduceMotion } from "./ui.js?v=14";
+import { icon } from "./icons.js?v=14";
+import * as T from "./trip.js?v=14";
 
 let timer = 0, starter = 0;
 let cur = null; // { host, root, ctx, shape, refs }
@@ -196,7 +196,9 @@ function mark(st, t) {
   const evs = new Map((st.events || []).map((e) => [e.key, e]));
   root.querySelectorAll(".item[data-k]").forEach((row) => {
     const e = evs.get(row.dataset.k);
-    row.classList.toggle("is-now", live && !!st.now && st.now.key === row.dataset.k);
+    const isNow = live && !!st.now && st.now.key === row.dataset.k;
+    if (isNow && !row.classList.contains("is-now")) play(row, [{ transform: "scale(.96)", opacity: 0.6 }, { transform: "none", opacity: 1 }], { response: 0.45 });
+    row.classList.toggle("is-now", isNow);
     row.classList.toggle("is-next", live && !!st.next && st.next.key === row.dataset.k);
     row.classList.toggle("is-past", live && !!e && e.end <= t && st.now?.key !== row.dataset.k);
   });

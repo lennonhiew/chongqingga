@@ -1,9 +1,9 @@
 // The Map tab: every place on an Amap base map, or the trip day by day with the legs between stops.
 // Leaflet loads only the first time the tab opens. Hotels (plan.hotels) are always on the map.
-import { h, play, reduceMotion, yuan } from "./ui.js?v=13";
-import { icon, svg } from "./icons.js?v=13";
-import { transport } from "./now.js?v=13";
-import * as T from "./trip.js?v=13";
+import { h, play, reduceMotion, yuan } from "./ui.js?v=14";
+import { icon, svg } from "./icons.js?v=14";
+import { transport } from "./now.js?v=14";
+import * as T from "./trip.js?v=14";
 
 // Amap street style with Chinese labels, the same names as the signs and the Amap app.
 const TILES = "https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}";
