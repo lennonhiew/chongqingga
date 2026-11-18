@@ -1,8 +1,8 @@
 // The Plan page: who's where, your cost, flights & trains, day by day.
-import { h, play, avatar, yuan, rollNumber, reduceMotion } from "./ui.js?v=16";
-import { mountClock, liveStatus } from "./now.js?v=16";
-import { weather, cityFor, dateOf, now as nowMs } from "./trip.js?v=16";
-import { icon } from "./icons.js?v=16";
+import { h, play, avatar, yuan, rollNumber, reduceMotion } from "./ui.js?v=17";
+import { mountClock, liveStatus } from "./now.js?v=17";
+import { weather, cityFor, dateOf, now as nowMs, ampm } from "./trip.js?v=17";
+import { icon } from "./icons.js?v=17";
 
 let imgSrc = (s) => s;
 
@@ -181,18 +181,21 @@ function tripCard(t, i, { mine, label, people, faces }) {
       h("span", fmt(t.date, { weekday: "short", day: "numeric", month: "short" }), " · ", [t.carrier, t.no].filter(Boolean).join(" ")),
       h("span.status", { class: `status ${booked ? "booked" : ""}` }, booked ? "Booked" : "Not booked yet")),
     h("div.flight-row",
-      h("div.flight-end", h("div.flight-time", t.dep), h("div.flight-code", t.fromCity || t.from)),
+      h("div.flight-end", h("div.flight-time", tm(t.dep)), h("div.flight-code", t.fromCity || t.from)),
       h("div", { html: svg }),
-      h("div.flight-end.right", h("div.flight-time", t.arr, t.plusDays ? h("sup", "+" + t.plusDays) : null), h("div.flight-code", t.toCity || t.to))),
+      h("div.flight-end.right", h("div.flight-time", tm(t.arr), t.plusDays ? h("sup", "+" + t.plusDays) : null), h("div.flight-code", t.toCity || t.to))),
     h("div.trip-foot",
       h("span.trip-who", faces(people, 6), h("span", label)),
       h("span.trip-price", t.rmEach ? rm(t.rmEach) : "", t.rmEach ? h("small", " each") : null)),
-    t.bag || t.note ? h("p.trip-note", [t.bag ? "🧳 " + t.bag : "", t.note].filter(Boolean).join(". ")) : null);
+    t.bag || t.note ? h("p.trip-note", ampm([t.bag ? "🧳 " + t.bag : "", t.note].filter(Boolean).join(". "))) : null);
 }
+
+// "17:20" → 5:20 with a small PM after it.
+const tm = (s) => { const [c, p] = ampm(s).split(" "); return p ? [c, h("small.ap", p)] : c; };
 
 function itemRow(it, { key, mine, label, state, votesFor, ctx }) {
   let lead = h("span.ic", KIND_ICON[it.kind] || "•");
-  let main = it.zh ? h("span.tx", it.zh, h("small", it.text)) : h("span.tx", it.text);
+  let main = it.zh ? h("span.tx", it.zh, h("small", ampm(it.text))) : h("span.tx", ampm(it.text));
   let action = null;
   // Spots outside the vote open that day's route on the map.
   if (it.kind === "spot" && it.at) action = () => ctx.openMap({ mode: "trip", date: key.split("#")[0] });
@@ -211,13 +214,13 @@ function itemRow(it, { key, mine, label, state, votesFor, ctx }) {
     if (top && top.n > 0) {
       lead = top.o.image ? h("img.thumb", { src: imgSrc(top.o.image), alt: "", loading: "lazy" }) : h("span.ic", top.o.emoji);
       main = h("span.tx", top.o.zh || top.o.name, h("small", [top.o.zh ? top.o.name : "", `winning with ${top.n} votes, tap to vote`].filter(Boolean).join(" · ")));
-    } else main = h("span.tx", it.text, h("small", "No votes yet. Tap to vote."));
+    } else main = h("span.tx", ampm(it.text), h("small", "No votes yet. Tap to vote."));
     action = () => ctx.openPoll(it.pollId);
   }
-  if (it.note) main.append(h("span.inote", it.note));
+  if (it.note) main.append(h("span.inote", ampm(it.note)));
   if (!mine || (it.groups?.length && !it.groups.includes("all"))) main.append(h("span.who-tag.sm", label));
   const row = h(action ? "li.item.tap" : "li.item", { class: `item ${action ? "tap" : ""} ${mine ? "" : "not-mine"} kind-${it.kind}` },
-    h("span.t", it.time || ""), lead, main);
+    h("span.t", tm(it.time)), lead, main);
   row.dataset.k = key;
   if (action) {
     row.setAttribute("role", "button");

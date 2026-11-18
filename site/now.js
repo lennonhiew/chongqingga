@@ -1,8 +1,8 @@
 // The live card at the top of Itinerary: a clock, a countdown to your flight,
 // and during the trip "Now" and "Next" with travel times. Also marks the matching rows in the list.
-import { h, play, reduceMotion } from "./ui.js?v=16";
-import { icon } from "./icons.js?v=16";
-import * as T from "./trip.js?v=16";
+import { h, play, reduceMotion } from "./ui.js?v=17";
+import { icon } from "./icons.js?v=17";
+import * as T from "./trip.js?v=17";
 
 let timer = 0, starter = 0;
 let cur = null; // { host, root, ctx, shape, refs }
@@ -69,7 +69,7 @@ function build(st, g, sts, me, t) {
       countdown(R),
       h("p.nc-route", icon(firstTrip.kind === "train" ? "metro" : "plane"),
         h("span", `${firstTrip.fromCity || firstTrip.from} → ${firstTrip.toCity || firstTrip.to}`),
-        h("span.nc-when", T.fmt(st.start, { weekday: "short", day: "numeric", month: "short" }) + ", " + firstTrip.dep)),
+        h("span.nc-when", T.fmt(st.start, { weekday: "short", day: "numeric", month: "short" }) + ", " + T.ampm(firstTrip.dep))),
       others.length ? h("ul.nc-others", others.map((x) => {
         const el = h("span.nc-mini");
         R.cds.push({ el, st: x.st });
@@ -103,7 +103,7 @@ function build(st, g, sts, me, t) {
   const nowBlock = h("div.nc-block.now",
     h("p.nc-kicker", h("span.dot"), "Now"),
     nowE ? h("h2.nc-title", nm.main) : h("h2.nc-title.idle", st.idle),
-    nowE ? h("p.nc-sub", [nm.sub, `since ${T.hhmm(nowE.start)}`].filter(Boolean).join(" · ")) : st.prev ? h("p.nc-sub", `Last: ${T.names(st.prev).main}`) : null,
+    nowE ? h("p.nc-sub", [nm.sub, `since ${T.clock(nowE.start)}`].filter(Boolean).join(" · ")) : st.prev ? h("p.nc-sub", `Last: ${T.names(st.prev).main}`) : null,
     nowE ? h("div.nc-progress", R.bar) : null);
 
   let nextBlock = null;
@@ -113,10 +113,10 @@ function build(st, g, sts, me, t) {
     const from = (nowE || st.prev)?.exit || (nowE || st.prev)?.geo;
     const leg = from && n.geo ? T.legs(from, n.geo) : null;
     nextBlock = h("div.nc-block.next",
-      h("p.nc-kicker", "Next at ", T.hhmm(n.start), h("span.nc-in", R.inTxt)),
+      h("p.nc-kicker", "Next at ", T.clock(n.start), h("span.nc-in", R.inTxt)),
       h("h3.nc-next", nn.main, n.day.date !== T.dateOf(t) ? h("small", " " + T.fmt(n.start, { weekday: "short", day: "numeric", month: "short" })) : null),
       nn.sub ? h("p.nc-en", nn.sub) : null,
-      n.item?.note ? h("p.nc-tip", n.item.note) : null,
+      n.item?.note ? h("p.nc-tip", T.ampm(n.item.note)) : null,
       leg && leg.km > 0.05 ? transport(leg, n) : n.geo ? h("a.nc-link", { href: T.amapUrl(n.geo, nn.main, "car"), target: "_blank", rel: "noopener" }, "Directions in Amap") : null);
   }
   return h("section.now-card.during", top,

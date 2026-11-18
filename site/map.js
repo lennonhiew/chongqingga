@@ -1,9 +1,9 @@
 // The Map tab: every place on an Amap base map, or the trip day by day with the legs between stops.
 // Leaflet loads only the first time the tab opens. Hotels (plan.hotels) are always on the map.
-import { h, play, reduceMotion, yuan } from "./ui.js?v=16";
-import { icon, svg } from "./icons.js?v=16";
-import { transport } from "./now.js?v=16";
-import * as T from "./trip.js?v=16";
+import { h, play, reduceMotion, yuan } from "./ui.js?v=17";
+import { icon, svg } from "./icons.js?v=17";
+import { transport } from "./now.js?v=17";
+import * as T from "./trip.js?v=17";
 
 // Amap street style with Chinese labels, the same names as the signs and the Amap app.
 const TILES = "https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}";
@@ -259,7 +259,7 @@ const toneOf = (c = "") => (/chengdu/i.test(c) && !/chongqing/i.test(c) ? "cd" :
 
 function legCard(n, from, to, leg, hot, idx) {
   const fn = T.names(from), tn = T.names(to);
-  const when = to.start ? `${from.start ? T.hhmm(from.start) + " → " : ""}${T.hhmm(to.start)}` : "Back to the hotel";
+  const when = to.start ? `${from.start ? T.clock(from.start) + " → " : ""}${T.clock(to.start)}` : "Back to the hotel";
   return h("div.leg-card", { class: `leg-card ${hot ? "hot" : ""}`, "data-leg": idx },
     h("div.leg-top", h("span.leg-n", n), h("span.leg-when", when)),
     h("p.leg-route", h("b", fn.main), icon("arrow"), h("b", tn.main)),
@@ -293,8 +293,8 @@ function showStop(e, num) {
   card(e.opt?.image ? h("img.mc-img", { src: ctx.imgSrc(e.opt.image), alt: "" }) : h("span.mc-img.num", String(num)),
     h("div.mc-body",
       h("b", nm.main),
-      h("small", [nm.sub, `${T.fmt(e.start, { weekday: "short", day: "numeric", month: "short" })} ${T.hhmm(e.start)}`, you ? `${T.dist(T.km(you, e.geo))} away` : ""].filter(Boolean).join(" · ")),
-      e.item?.note ? h("small", e.item.note) : null,
+      h("small", [nm.sub, `${T.fmt(e.start, { weekday: "short", day: "numeric", month: "short" })} ${T.clock(e.start)}`, you ? `${T.dist(T.km(you, e.geo))} away` : ""].filter(Boolean).join(" · ")),
+      e.item?.note ? h("small", T.ampm(e.item.note)) : null,
       h("div.mc-actions",
         h("a.mc-btn", { href: T.amapUrl(e.geo, nm.main, "bus"), target: "_blank", rel: "noopener" }, "Directions"),
         e.opt ? h("button.mc-btn.ghost", { onclick: () => ctx.openPlace(e.opt.id) }, "See in Vote") : h("a.mc-btn.ghost", { href: T.amapPin(e.geo, nm.main), target: "_blank", rel: "noopener" }, "Open in Amap"))));
@@ -306,8 +306,8 @@ function showSpot(it, d) {
   card(h("span.mc-img.blank"),
     h("div.mc-body",
       h("b", name),
-      h("small", [it.zh ? it.text : "", `${T.fmt(T.at(d.date, "12:00"), { weekday: "short", day: "numeric", month: "short" })} ${it.time || ""}`, you ? `${T.dist(T.km(you, it.at))} away` : ""].filter(Boolean).join(" · ")),
-      it.note ? h("small", it.note) : null,
+      h("small", [it.zh ? T.ampm(it.text) : "", `${T.fmt(T.at(d.date, "12:00"), { weekday: "short", day: "numeric", month: "short" })} ${T.ampm(it.time)}`, you ? `${T.dist(T.km(you, it.at))} away` : ""].filter(Boolean).join(" · ")),
+      it.note ? h("small", T.ampm(it.note)) : null,
       h("div.mc-actions",
         h("a.mc-btn", { href: T.amapUrl(it.at, name, "bus"), target: "_blank", rel: "noopener" }, "Directions"),
         h("button.mc-btn.ghost", { onclick: () => { mode = "trip"; day = d.date; drawnKey = ""; hideCard(); draw(); } }, "That day's route"))));

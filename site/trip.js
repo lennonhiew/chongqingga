@@ -13,6 +13,9 @@ export const dateOf = (ms) => new Date(ms + OFFSET).toISOString().slice(0, 10);
 export const addDays = (date, n) => dateOf(at(date) + n * 86400e3);
 const two = (n) => String(n).padStart(2, "0");
 export const hhmm = (ms) => { const d = new Date(ms + OFFSET); return `${two(d.getUTCHours())}:${two(d.getUTCMinutes())}`; };
+// Display only: every "HH:MM" in a string becomes 12-hour ("17:20" → "5:20 PM"). Data stays 24-hour.
+export const ampm = (s) => (s == null ? "" : String(s).replace(/\b([01]?\d|2[0-3]):([0-5]\d)\b/g, (_, H, M) => `${+H % 12 || 12}:${M} ${+H < 12 ? "AM" : "PM"}`));
+export const clock = (ms) => ampm(hhmm(ms));
 
 const fmtCache = {};
 export function fmt(ms, opts) {
@@ -119,7 +122,7 @@ export function legs(a, b) {
 export const fastest = (l) => ["walk", "metro", "car"].filter((k) => l[k] != null).sort((x, y) => l[x] - l[y])[0];
 
 // Chinese first: 洪崖洞 big, Hongyadong small.
-export const names = (e) => (e.zh ? { main: e.zh, sub: e.title } : { main: e.title, sub: "" });
+export const names = (e) => (e.zh ? { main: e.zh, sub: ampm(e.title) } : { main: ampm(e.title), sub: "" });
 
 // ---------- Hotels: plan.hotels = [{ name, zh, at: [lat, lng], from, to, groups }] (from = check-in, to = check-out) ----------
 export const hotels = (plan, g) => (plan?.hotels || []).filter((x) => x.at && forGroup(x.groups, g));
