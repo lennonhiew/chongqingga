@@ -1,8 +1,8 @@
 // The live card at the top of Itinerary: a clock, a countdown to your flight,
 // and during the trip "Now" and "Next" with travel times. Also marks the matching rows in the list.
-import { h, play, reduceMotion } from "./ui.js?v=14";
-import { icon } from "./icons.js?v=14";
-import * as T from "./trip.js?v=14";
+import { h, play, reduceMotion } from "./ui.js?v=15";
+import { icon } from "./icons.js?v=15";
+import * as T from "./trip.js?v=15";
 
 let timer = 0, starter = 0;
 let cur = null; // { host, root, ctx, shape, refs }
@@ -110,12 +110,13 @@ function build(st, g, sts, me, t) {
   if (st.next) {
     const n = st.next, nn = T.names(n);
     R.inTxt = h("span");
-    const from = (nowE || st.prev)?.geo;
+    const from = (nowE || st.prev)?.exit || (nowE || st.prev)?.geo;
     const leg = from && n.geo ? T.legs(from, n.geo) : null;
     nextBlock = h("div.nc-block.next",
       h("p.nc-kicker", "Next at ", T.hhmm(n.start), h("span.nc-in", R.inTxt)),
       h("h3.nc-next", nn.main, n.day.date !== T.dateOf(t) ? h("small", " " + T.fmt(n.start, { weekday: "short", day: "numeric", month: "short" })) : null),
       nn.sub ? h("p.nc-en", nn.sub) : null,
+      n.item?.note ? h("p.nc-tip", n.item.note) : null,
       leg && leg.km > 0.05 ? transport(leg, n) : n.geo ? h("a.nc-link", { href: T.amapUrl(n.geo, nn.main, "car"), target: "_blank", rel: "noopener" }, "Directions in Amap") : null);
   }
   return h("section.now-card.during", top,

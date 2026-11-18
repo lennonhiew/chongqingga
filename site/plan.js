@@ -1,12 +1,12 @@
 // The Plan page: who's where, your cost, flights & trains, day by day.
-import { h, play, avatar, yuan, rollNumber, reduceMotion } from "./ui.js?v=14";
-import { mountClock, liveStatus } from "./now.js?v=14";
-import { weather, cityFor, dateOf, now as nowMs } from "./trip.js?v=14";
-import { icon } from "./icons.js?v=14";
+import { h, play, avatar, yuan, rollNumber, reduceMotion } from "./ui.js?v=15";
+import { mountClock, liveStatus } from "./now.js?v=15";
+import { weather, cityFor, dateOf, now as nowMs } from "./trip.js?v=15";
+import { icon } from "./icons.js?v=15";
 
 let imgSrc = (s) => s;
 
-const KIND_ICON = { flight: "✈️", train: "🚄", hotel: "🛏️", food: "🍜", note: "📝", place: "📍", vote: "🗳️" };
+const KIND_ICON = { flight: "✈️", train: "🚄", hotel: "🛏️", food: "🍜", note: "📝", place: "📍", spot: "📍", vote: "🗳️" };
 const D = (s) => new Date(s + "T00:00:00");
 const dayDiff = (a, b) => Math.round((D(b) - D(a)) / 86400000);
 const fmt = (s, o) => D(s).toLocaleDateString("en-GB", o);
@@ -188,8 +188,10 @@ function tripCard(t, i, { mine, label, people, faces }) {
 
 function itemRow(it, { key, mine, label, state, votesFor, ctx }) {
   let lead = h("span.ic", KIND_ICON[it.kind] || "•");
-  let main = h("span.tx", it.text);
+  let main = it.zh ? h("span.tx", it.zh, h("small", it.text)) : h("span.tx", it.text);
   let action = null;
+  // Spots outside the vote open that day's route on the map.
+  if (it.kind === "spot" && it.at) action = () => ctx.openMap({ mode: "trip", date: key.split("#")[0] });
   if (it.kind === "place" && it.optionId) {
     const o = state.options.find((x) => x.id === it.optionId);
     if (o) {
@@ -208,6 +210,7 @@ function itemRow(it, { key, mine, label, state, votesFor, ctx }) {
     } else main = h("span.tx", it.text, h("small", "No votes yet. Tap to vote."));
     action = () => ctx.openPoll(it.pollId);
   }
+  if (it.note) main.append(h("span.inote", it.note));
   if (!mine || (it.groups?.length && !it.groups.includes("all"))) main.append(h("span.who-tag.sm", label));
   const row = h(action ? "li.item.tap" : "li.item", { class: `item ${action ? "tap" : ""} ${mine ? "" : "not-mine"} kind-${it.kind}` },
     h("span.t", it.time || ""), lead, main);

@@ -1,9 +1,9 @@
 // The Map tab: every place on an Amap base map, or the trip day by day with the legs between stops.
 // Leaflet loads only the first time the tab opens. Hotels (plan.hotels) are always on the map.
-import { h, play, reduceMotion, yuan } from "./ui.js?v=14";
-import { icon, svg } from "./icons.js?v=14";
-import { transport } from "./now.js?v=14";
-import * as T from "./trip.js?v=14";
+import { h, play, reduceMotion, yuan } from "./ui.js?v=15";
+import { icon, svg } from "./icons.js?v=15";
+import { transport } from "./now.js?v=15";
+import * as T from "./trip.js?v=15";
 
 // Amap street style with Chinese labels, the same names as the signs and the Amap app.
 const TILES = "https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}";
@@ -156,6 +156,15 @@ function drawAll() {
     m.on("click", (e) => { L.DomEvent.stopPropagation(e); showPlace(p); });
     pop(m, i);
   });
+  // Spots from the itinerary that aren't in the vote (山城步道, 下浩里…) get plain pins in their city's colour.
+  if (area !== "po") for (const d of plan().days || []) for (const it of d.items || []) {
+    if (it.kind !== "spot" || !it.at || !T.forGroup(it.groups, myGroup())) continue;
+    const tone = toneOf(d.city) === "cd" ? "cd" : "cq";
+    if (area && area !== tone) continue;
+    lastPts.push(it.at);
+    const m = L.marker(it.at, { icon: L_icon(`${tone} plain spot`, ""), title: it.zh || it.text }).addTo(layer);
+    m.on("click", (e) => { L.DomEvent.stopPropagation(e); showSpot(it, d); });
+  }
   const chip = (id, label, n) => h("button.chip.pressable", { "aria-pressed": String(area === id), onclick: () => { area = id; drawnKey = ""; hideCard(); draw(); } }, h("span", label), h("small", n));
   els.top.replaceChildren(h("div.chips", chip(null, "All", ps.length), AREAS.map((a) => chip(a.id, a.label, ps.filter((p) => p.o.pollId === a.poll).length))));
   const key = (cls, label) => h("span.key-item", h("i", { class: `k ${cls}` }), label);
@@ -191,10 +200,12 @@ function drawTrip() {
   const stops = [...(hm ? [hotelStop(hm, "am")] : []), ...evs, ...(hn ? [hotelStop(hn, "pm")] : [])];
   lastPts = stops.map((e) => e.geo);
 
+  const out = (e) => e.exit || e.geo;
+  for (const e of stops) if (e.exit) L.polyline([e.geo, e.exit], { className: "ride-line", weight: 3, interactive: false }).addTo(layer); // the cable car itself
   for (let i = 1; i < stops.length; i++) {
-    const seg = L.polyline([stops[i - 1].geo, stops[i].geo], { className: "route-line", weight: 4, dashArray: "1 9", lineCap: "round" }).addTo(layer);
+    const seg = L.polyline([out(stops[i - 1]), stops[i].geo], { className: "route-line", weight: 4, dashArray: "1 9", lineCap: "round" }).addTo(layer);
     segs.push(seg);
-    legGeo.push([stops[i - 1].geo, stops[i].geo]);
+    legGeo.push([out(stops[i - 1]), stops[i].geo]);
   }
   let n = 0;
   stops.forEach((e, i) => {
@@ -220,7 +231,7 @@ function drawTrip() {
   const numOf = (e) => (e.hotel ? "H" : String(evs.indexOf(e) + 1));
   for (let i = 1; i < stops.length; i++) {
     const a = stops[i - 1], b = stops[i];
-    cards.push(legCard(`${numOf(a)} → ${numOf(b)}`, a, b, T.legs(a.geo, b.geo), live && st.next?.key === b.key, i - 1));
+    cards.push(legCard(`${numOf(a)} → ${numOf(b)}`, a, b, T.legs(out(a), b.geo), live && st.next?.key === b.key, i - 1));
   }
   if (you && live && st.next?.geo) cards.unshift(legCard("You", { title: "You", zh: "", geo: you }, st.next, T.legs(you, st.next.geo), true, -1));
   els.rail.replaceChildren(...(cards.length ? cards : [h("div.leg-card.empty", "One pinned stop this day")]));
@@ -281,10 +292,24 @@ function showStop(e, num) {
     h("div.mc-body",
       h("b", nm.main),
       h("small", [nm.sub, `${T.fmt(e.start, { weekday: "short", day: "numeric", month: "short" })} ${T.hhmm(e.start)}`, you ? `${T.dist(T.km(you, e.geo))} away` : ""].filter(Boolean).join(" · ")),
+      e.item?.note ? h("small", e.item.note) : null,
       h("div.mc-actions",
         h("a.mc-btn", { href: T.amapUrl(e.geo, nm.main, "bus"), target: "_blank", rel: "noopener" }, "Directions"),
         e.opt ? h("button.mc-btn.ghost", { onclick: () => ctx.openPlace(e.opt.id) }, "See in Vote") : h("a.mc-btn.ghost", { href: T.amapPin(e.geo, nm.main), target: "_blank", rel: "noopener" }, "Open in Amap"))));
   map.panInside(e.geo, { paddingBottomRight: [20, 170], paddingTopLeft: [20, 20] });
+}
+
+function showSpot(it, d) {
+  const name = it.zh || it.text;
+  card(h("span.mc-img.blank"),
+    h("div.mc-body",
+      h("b", name),
+      h("small", [it.zh ? it.text : "", `${T.fmt(T.at(d.date, "12:00"), { weekday: "short", day: "numeric", month: "short" })} ${it.time || ""}`, you ? `${T.dist(T.km(you, it.at))} away` : ""].filter(Boolean).join(" · ")),
+      it.note ? h("small", it.note) : null,
+      h("div.mc-actions",
+        h("a.mc-btn", { href: T.amapUrl(it.at, name, "bus"), target: "_blank", rel: "noopener" }, "Directions"),
+        h("button.mc-btn.ghost", { onclick: () => { mode = "trip"; day = d.date; drawnKey = ""; hideCard(); draw(); } }, "That day's route"))));
+  map.panInside(it.at, { paddingBottomRight: [20, 170], paddingTopLeft: [20, 20] });
 }
 
 function showHotel(x) {

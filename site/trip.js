@@ -55,8 +55,9 @@ export function timeline(plan, state, g) {
       out.push({
         key: `${d.date}#${i}`, day: d, item: it, start, end: null, opt, kind: it.kind, range: !!d.endDate,
         title: it.text || opt?.name || "",
-        zh: opt?.zh || "",
+        zh: opt?.zh || it.zh || "",
         geo: it.at || (it.optionId && plan.geo?.[it.optionId]) || null,
+        exit: it.exit || null, // where a ride (cable car) drops you; the next leg starts here
       });
     });
   }

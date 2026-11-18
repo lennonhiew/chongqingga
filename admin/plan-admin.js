@@ -5,7 +5,7 @@ const clone = (x) => JSON.parse(JSON.stringify(x));
 const uid = (p) => p + Math.random().toString(36).slice(2, 8);
 const rm = (n) => "RM " + Math.round(Number(n) || 0).toLocaleString("en");
 const fmt = (s, o = { weekday: "short", day: "numeric", month: "short" }) => (s ? new Date(s + "T00:00:00").toLocaleDateString("en-GB", o) : "");
-const KINDS = { place: "📍 Place (from the poll)", vote: "🗳️ Poll winner", flight: "✈️ Flight", train: "🚄 Train", hotel: "🛏️ Hotel", food: "🍜 Food", note: "📝 Note" };
+const KINDS = { place: "📍 Place (from the poll)", spot: "📌 Spot (not in the poll)", vote: "🗳️ Poll winner", flight: "✈️ Flight", train: "🚄 Train", hotel: "🛏️ Hotel", food: "🍜 Food", note: "📝 Note" };
 const COLORS = { cq: "Chongqing red", cd: "Chengdu green", camp: "Camp gold", mixed: "Purple" };
 
 const label = (text, ...kids) => h("label", text, ...kids);
@@ -170,6 +170,8 @@ export function viewPlan({ state, admin, confirmSheet, iconBtn }) {
     const list = h("div.item-rows");
     const itemRow = (it = { kind: "place" }) => {
       const time = input(it.time, { placeholder: "09:00", "aria-label": "Time (24 h, China time)" });
+      const zh = input(it.zh || "", { placeholder: "Chinese name (optional)", "aria-label": "Chinese name" });
+      const note = input(it.note || "", { placeholder: "Tip, e.g. take the lift down (optional)", "aria-label": "Tip" });
       const pin = input(it.at ? it.at.join(", ") : "", { placeholder: "Map pin: lat, lng from Amap (optional)", "aria-label": "Map pin" });
       const kind = select(it.kind || "place", KINDS);
       const text = input(it.text, { placeholder: "What happens", "aria-label": "Text" });
@@ -177,6 +179,7 @@ export function viewPlan({ state, admin, confirmSheet, iconBtn }) {
       const poll = select(it.pollId || state.polls[0]?.id, pollChoices);
       const whoSel = select(it.groups?.length && !it.groups.includes("all") ? it.groups[0] : "all", whoChoices);
       const sync = () => {
+        zh.hidden = kind.value === "place" || kind.value === "vote";
         place.hidden = kind.value !== "place"; poll.hidden = kind.value !== "vote";
         text.placeholder = kind.value === "place" ? "Name (leave empty to use the place's)" : "What happens";
         const auto = kind.value === "place" && plan.geo?.[place.value];
@@ -185,7 +188,7 @@ export function viewPlan({ state, admin, confirmSheet, iconBtn }) {
       place.addEventListener("change", sync);
       kind.addEventListener("change", sync);
       place.addEventListener("change", () => { if (!text.value) text.value = state.options.find((o) => o.id === place.value)?.name || ""; });
-      const row = h("div.irow", time, kind, h("div.icol", text, place, poll, pin), whoSel,
+      const row = h("div.irow", time, kind, h("div.icol", text, zh, place, poll, note, pin), whoSel,
         h("span.tools",
           h("button.icon-btn", { type: "button", title: "Up", html: '<svg viewBox="0 0 20 20"><path d="M5 12l5-5 5 5"/></svg>', onclick: () => row.previousElementSibling?.before(row) }),
           h("button.icon-btn", { type: "button", title: "Down", html: '<svg viewBox="0 0 20 20"><path d="M5 8l5 5 5-5"/></svg>', onclick: () => row.nextElementSibling?.after(row) }),
@@ -196,6 +199,9 @@ export function viewPlan({ state, admin, confirmSheet, iconBtn }) {
         if (k === "place") out.optionId = place.value;
         if (k === "vote") out.pollId = poll.value;
         if (whoSel.value !== "all") out.groups = [whoSel.value];
+        if (zh.value.trim()) out.zh = zh.value.trim();
+        if (note.value.trim()) out.note = note.value.trim();
+        if (it.exit) out.exit = it.exit; // cable car drop-off, set from code
         const ll = pin.value.match(/(-?\d+(?:\.\d+)?)\s*[,，\s]\s*(-?\d+(?:\.\d+)?)/);
         if (ll) { let [a, b] = [+ll[1], +ll[2]]; if (a > 90) [a, b] = [b, a]; out.at = [a, b]; } // Amap copies "lng,lat"; flip if needed
         return out;

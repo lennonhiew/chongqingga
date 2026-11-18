@@ -548,6 +548,7 @@
 .nc-next { font-size: 20px; font-weight: 650; letter-spacing: -0.01em; margin-top: 4px; line-height: 24px; }
 .nc-next small { font-size: 13px; font-weight: 500; color: var(--text-2); }
 .nc-en { font-size: 13px; color: var(--text-2); line-height: 18px; }
+.nc-tip { margin-top: 8px; padding: 8px 12px; border-radius: 10px; background: var(--card); font-size: 13px; line-height: 18px; color: var(--text); box-shadow: inset 0 0 0 1px var(--sep); }
 .nc-link { display: inline-block; margin-top: 8px; font-size: 14px; font-weight: 600; color: var(--accent); text-decoration: none; }
 
 /* Walk / Metro / Taxi: three equal cells, icon, time, label on one line each. Fastest is marked. */
@@ -566,6 +567,8 @@
 
 /* List marks: what's on now, what's next, what's done */
 .item.is-past { opacity: 0.45; }
+.item .tx .inote { display: block; margin-top: 2px; font-size: 12.5px; line-height: 17px; font-weight: 500; color: var(--text-2); }
+.item.is-now .tx .inote { font-size: 13px; line-height: 18px; }
 /* The stop you're at right now lifts out of the list: tinted, outlined, bigger photo and name, a "Now" label. */
 .item.is-now { grid-template-columns: 58px 56px minmax(0, 1fr); margin: 4px -8px; padding: 12px 8px; border-radius: 14px; background: color-mix(in srgb, var(--chili) 14%, var(--card)); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--chili) 60%, transparent), 0 8px 24px color-mix(in srgb, var(--chili) 18%, transparent); }
 .item.is-now + .item { box-shadow: none; }
@@ -627,6 +630,7 @@
 .pin.hotel { background: #1d1d1f; color: #fff; border-radius: 10px; box-shadow: 0 0 0 2px #fff, 0 2px 8px rgba(0, 0, 0, 0.3); }
 .pin.hotel .ico { width: 18px; height: 18px; }
 .route-line { stroke: var(--text); opacity: 0.55; transition: opacity 0.2s; }
+.ride-line { stroke: var(--chili); opacity: 0.8; stroke-dasharray: 6 6; }
 .route-line.hot { stroke: var(--accent); opacity: 1; stroke-dasharray: none; }
 .you-dot { display: block; width: 20px; height: 20px; border-radius: 50%; background: var(--accent); border: 3px solid #fff; animation: you 2s cubic-bezier(0.22, 1, 0.36, 1) infinite; }
 @keyframes you { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 45%, transparent), 0 2px 8px rgba(0, 0, 0, 0.3); } 100% { box-shadow: 0 0 0 16px transparent, 0 2px 8px rgba(0, 0, 0, 0.3); } }
