@@ -1,17 +1,12 @@
 // The Map tab: every place on an Amap base map, or the trip day by day with the legs between stops.
 // Leaflet loads only the first time the tab opens. Hotels (plan.hotels) are always on the map.
-import { h, play, reduceMotion, yuan } from "./ui.js?v=15";
-import { icon, svg } from "./icons.js?v=15";
-import { transport } from "./now.js?v=15";
-import * as T from "./trip.js?v=15";
+import { h, play, reduceMotion, yuan } from "./ui.js?v=16";
+import { icon, svg } from "./icons.js?v=16";
+import { transport } from "./now.js?v=16";
+import * as T from "./trip.js?v=16";
 
 // Amap street style with Chinese labels, the same names as the signs and the Amap app.
 const TILES = "https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}";
-const AREAS = [
-  { id: "cq", label: "重庆 Chongqing", poll: "p1", tone: "cq" },
-  { id: "cd", label: "成都 Chengdu", poll: "pe", tone: "cd" },
-  { id: "po", label: "Day trips", poll: "po", tone: "trip" },
-];
 const RAIL_H = 172; // room the leg cards take at the bottom of the map
 
 let L = null, map = null, layer = null, youLayer = null, loading = null;
@@ -104,14 +99,7 @@ function movePill() {
 // ---------- data ----------
 const plan = () => ctx.state.plan || {};
 const myGroup = () => T.groupOf(plan(), ctx.me);
-function places() {
-  const geo = plan().geo || {};
-  const fromItems = {};
-  (plan().days || []).forEach((d) => (d.items || []).forEach((it) => { if (it.optionId && it.at) fromItems[it.optionId] = it.at; }));
-  return ctx.state.options.map((o) => ({ o, geo: fromItems[o.id] || geo[o.id] })).filter((p) => p.geo);
-}
 const votes = (id) => ctx.state.votes.filter((v) => v.optionId === id).length;
-const iPicked = (id) => !!ctx.me && ctx.state.votes.some((v) => v.optionId === id && v.memberId === ctx.me.id);
 function tripDays() {
   const evs = T.timeline(plan(), ctx.state, myGroup()).filter((e) => e.geo && !e.range);
   const by = new Map();
@@ -144,37 +132,51 @@ function drawHotels() {
   }
 }
 
+// Only what's in your itinerary (voted places and extra spots), coloured by the city of that day.
+function itineraryStops() {
+  const g = myGroup(), geo = plan().geo || {}, seen = new Set(), out = [];
+  for (const d of (plan().days || []).slice().sort((x, y) => x.date.localeCompare(y.date))) {
+    if (!T.forGroup(d.groups, g)) continue;
+    const tone = toneOf(d.city) === "cd" ? "cd" : "cq";
+    for (const it of d.items || []) {
+      if (!T.forGroup(it.groups, g)) continue;
+      if (it.kind === "place" && it.optionId) {
+        const o = ctx.state.options.find((x) => x.id === it.optionId), at = it.at || geo[it.optionId];
+        if (!o || !at || seen.has(o.id)) continue;
+        seen.add(o.id);
+        out.push({ o, geo: at, tone, d });
+      } else if (it.kind === "spot" && it.at) {
+        const k = it.zh || it.text;
+        if (seen.has(k)) continue;
+        seen.add(k);
+        out.push({ spot: it, geo: it.at, tone, d });
+      }
+    }
+  }
+  return out;
+}
+
 function drawAll() {
   els.rail.hidden = true;
-  const ps = places();
-  const tone = (o) => AREAS.find((a) => a.poll === o.pollId)?.tone || "trip";
-  const shown = area ? ps.filter((p) => p.o.pollId === AREAS.find((a) => a.id === area).poll) : ps;
-  lastPts = shown.map((p) => p.geo).concat(T.hotels(plan(), myGroup()).map((x) => x.at));
-  shown.forEach((p, i) => {
-    const inner = p.o.image ? `<img src="${ctx.imgSrc(p.o.image)}" alt="">` : "";
-    const m = L.marker(p.geo, { icon: L_icon(`${tone(p.o)} ${p.o.image ? "has-img" : "plain"} ${iPicked(p.o.id) ? "picked" : ""}`, inner), riseOnHover: true, title: p.o.zh || p.o.name }).addTo(layer);
-    m.on("click", (e) => { L.DomEvent.stopPropagation(e); showPlace(p); });
+  const all = itineraryStops();
+  const shown = area ? all.filter((s) => s.tone === area) : all;
+  lastPts = shown.map((s) => s.geo).concat(T.hotels(plan(), myGroup()).map((x) => x.at));
+  shown.forEach((s, i) => {
+    const img = s.o?.image;
+    const title = s.o ? s.o.zh || s.o.name : s.spot.zh || s.spot.text;
+    const m = L.marker(s.geo, { icon: L_icon(`${s.tone} ${img ? "has-img" : "plain"}`, img ? `<img src="${ctx.imgSrc(img)}" alt="">` : ""), riseOnHover: true, title }).addTo(layer);
+    m.on("click", (e) => { L.DomEvent.stopPropagation(e); s.o ? showPlace({ o: s.o, geo: s.geo }) : showSpot(s.spot, s.d); });
     pop(m, i);
   });
-  // Spots from the itinerary that aren't in the vote (山城步道, 下浩里…) get plain pins in their city's colour.
-  if (area !== "po") for (const d of plan().days || []) for (const it of d.items || []) {
-    if (it.kind !== "spot" || !it.at || !T.forGroup(it.groups, myGroup())) continue;
-    const tone = toneOf(d.city) === "cd" ? "cd" : "cq";
-    if (area && area !== tone) continue;
-    lastPts.push(it.at);
-    const m = L.marker(it.at, { icon: L_icon(`${tone} plain spot`, ""), title: it.zh || it.text }).addTo(layer);
-    m.on("click", (e) => { L.DomEvent.stopPropagation(e); showSpot(it, d); });
-  }
   const chip = (id, label, n) => h("button.chip.pressable", { "aria-pressed": String(area === id), onclick: () => { area = id; drawnKey = ""; hideCard(); draw(); } }, h("span", label), h("small", n));
-  els.top.replaceChildren(h("div.chips", chip(null, "All", ps.length), AREAS.map((a) => chip(a.id, a.label, ps.filter((p) => p.o.pollId === a.poll).length))));
+  els.top.replaceChildren(h("div.chips", chip(null, "All", all.length),
+    chip("cq", "重庆 Chongqing", all.filter((s) => s.tone === "cq").length),
+    chip("cd", "成都 Chengdu", all.filter((s) => s.tone === "cd").length)));
   const key = (cls, label) => h("span.key-item", h("i", { class: `k ${cls}` }), label);
-  els.below.replaceChildren(h("div.map-key",
-    key("cq", "Chongqing"), key("cd", "Chengdu"), key("trip", "Day trip"),
-    ctx.me ? key("picked", "You picked") : null,
+  els.below.replaceChildren(h("div.map-key", key("cq", "Chongqing"), key("cd", "Chengdu"),
     T.hotels(plan(), myGroup()).length ? key("hotel", "Hotel") : null));
-  // Everywhere spans two cities 270 km apart: start on the city you're in (or Chongqing).
-  const startArea = area || cityNow();
-  fitTo(core((startArea ? ps.filter((p) => p.o.pollId === AREAS.find((a) => a.id === startArea).poll) : shown).map((p) => p.geo)));
+  // Two cities 270 km apart: start on the city you're in (or Chongqing), leaving out far day trips.
+  fitTo(core(all.filter((s) => s.tone === (area || cityNow())).map((s) => s.geo)));
 }
 
 function cityNow() {

@@ -1,8 +1,8 @@
 // The Plan page: who's where, your cost, flights & trains, day by day.
-import { h, play, avatar, yuan, rollNumber, reduceMotion } from "./ui.js?v=15";
-import { mountClock, liveStatus } from "./now.js?v=15";
-import { weather, cityFor, dateOf, now as nowMs } from "./trip.js?v=15";
-import { icon } from "./icons.js?v=15";
+import { h, play, avatar, yuan, rollNumber, reduceMotion } from "./ui.js?v=16";
+import { mountClock, liveStatus } from "./now.js?v=16";
+import { weather, cityFor, dateOf, now as nowMs } from "./trip.js?v=16";
+import { icon } from "./icons.js?v=16";
 
 let imgSrc = (s) => s;
 
@@ -68,13 +68,17 @@ function build(root, ctx, which) {
 
   // ---------- Your cost ----------
   const tripCost = (g) => (plan.trips || []).filter((t) => forGroup(t.groups, g)).reduce((s, t) => s + (Number(t.rmEach) || 0), 0);
-  const myTickets = me ? state.votes.filter((v) => v.memberId === me.id).map((v) => state.options.find((o) => o.id === v.optionId)).filter(Boolean).reduce((s, o) => s + (o.priceCny || 0), 0) * ctx.rate() : 0;
+  // Entry tickets for every place in that group's itinerary (a place visited twice, like the cable car, counts twice).
+  const itinTickets = (g) => (plan.days || []).filter((d) => forGroup(d.groups, g))
+    .flatMap((d) => (d.items || []).filter((it) => it.kind === "place" && it.optionId && forGroup(it.groups, g)))
+    .reduce((s, it) => s + (state.options.find((o) => o.id === it.optionId)?.priceCny || 0), 0) * ctx.rate();
+  const myTickets = myGroup ? itinTickets(myGroup) : 0;
   if (myGroup) {
     const rows = [
       ["Flights & trains", tripCost(myGroup), "Your legs below, tax included"],
       ["Hotels", myGroup.nights * plan.rmPerNight, `${myGroup.nights} nights × ${rm(plan.rmPerNight)}`],
       ["Food & getting around", myGroup.days * plan.foodRmPerDay, `${myGroup.days} days × ${rm(plan.foodRmPerDay)}`],
-      ["Your tickets", myTickets, "From the places you voted for"],
+      ["Places in your itinerary", myTickets, "Entry tickets, plus the hotpot and bar estimates"],
     ];
     const totalEl = h("b.cost-total");
     const sum = rows.reduce((s, r) => s + r[1], 0);
@@ -89,9 +93,9 @@ function build(root, ctx, which) {
     sections.push(h("section.plan-sec",
       h("h2.sec-title", "Cost per person"),
       h("div.cost-card", h("ul.cost-rows", groups.map((g) => h("li",
-        h("span", g.name, h("small", `Flights & trains, ${g.nights} hotel nights, ${g.days} days of food`)),
-        h("span.v", rm(tripCost(g) + g.nights * plan.rmPerNight + g.days * plan.foodRmPerDay))))),
-        h("p.cost-note", me ? "Ask Leon to add you to a group to see your own budget." : "Sign in to see your own budget, including the tickets you voted for."))));
+        h("span", g.name, h("small", `Flights & trains, ${g.nights} hotel nights, ${g.days} days of food, itinerary places`)),
+        h("span.v", rm(tripCost(g) + g.nights * plan.rmPerNight + g.days * plan.foodRmPerDay + itinTickets(g)))))),
+        h("p.cost-note", me ? "Ask Leon to add you to a group to see your own budget." : "Sign in to see your own budget."))));
   }
 
   // ---------- Flights & trains ----------
