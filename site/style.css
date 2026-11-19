@@ -693,3 +693,4 @@
 .hotel-name .ic-svg, .hotel-name svg { flex: none; width: 22px; height: 22px; color: var(--chili); }
 .hotel-name small { display: block; font-size: 12.5px; font-weight: 550; color: var(--text-2); margin-top: 2px; }
 .hotel-room { margin-top: 6px; font-size: 13px; color: var(--text-2); }
+.status.reserved { background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); }

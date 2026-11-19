@@ -1,8 +1,8 @@
 // The Plan page: who's where, your cost, flights & trains, day by day.
-import { h, play, avatar, yuan, rollNumber, reduceMotion } from "./ui.js?v=19";
-import { mountClock, liveStatus } from "./now.js?v=19";
-import { weather, cityFor, dateOf, now as nowMs, ampm } from "./trip.js?v=19";
-import { icon } from "./icons.js?v=19";
+import { h, play, avatar, yuan, rollNumber, reduceMotion } from "./ui.js?v=20";
+import { mountClock, liveStatus } from "./now.js?v=20";
+import { weather, cityFor, dateOf, now as nowMs, ampm } from "./trip.js?v=20";
+import { icon } from "./icons.js?v=20";
 
 let imgSrc = (s) => s;
 
@@ -207,11 +207,12 @@ function tripCard(t, i, { mine, label, people, faces }) {
       <g class="plane">${glyph}
         <animateMotion dur="1.6s" begin="${reduceMotion.matches ? "0s" : 0.2 + i * 0.12 + "s"}" fill="freeze" rotate="auto"
           keyPoints="${reduceMotion.matches ? "0.5;0.5" : "0;0.5"}" keyTimes="0;1" calcMode="spline" keySplines="0.25 0.1 0.25 1"><mpath href="#tarc${i}"/></animateMotion></g></svg>`;
-  const booked = t.status === "booked";
+  // "reserved" = paid prebook (e.g. a China train bought automatically when sales open).
+  const st = t.status === "booked" ? "booked" : t.status === "reserved" ? "reserved" : "";
   return h("div.flight.trip", { class: `flight trip ${mine ? "mine" : ""}` },
     h("div.flight-top",
       h("span", fmt(t.date, { weekday: "short", day: "numeric", month: "short" }), " · ", [t.carrier, t.no].filter(Boolean).join(" ")),
-      h("span.status", { class: `status ${booked ? "booked" : ""}` }, booked ? "Booked" : "Not booked yet")),
+      h("span.status", { class: `status ${st}` }, st === "booked" ? "Booked" : st === "reserved" ? "Reserved" : "Not booked yet")),
     h("div.flight-row",
       h("div.flight-end", h("div.flight-time", tm(t.dep)), h("div.flight-code", t.fromCity || t.from)),
       h("div", { html: svg }),

@@ -1,8 +1,8 @@
 // The live card at the top of Itinerary: a clock, a countdown to your flight,
 // and during the trip "Now" and "Next" with travel times. Also marks the matching rows in the list.
-import { h, play, reduceMotion } from "./ui.js?v=19";
-import { icon } from "./icons.js?v=19";
-import * as T from "./trip.js?v=19";
+import { h, play, reduceMotion } from "./ui.js?v=20";
+import { icon } from "./icons.js?v=20";
+import * as T from "./trip.js?v=20";
 
 let timer = 0, starter = 0;
 let cur = null; // { host, root, ctx, shape, refs }
