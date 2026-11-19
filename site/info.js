@@ -1,7 +1,7 @@
 // The Info tab: everyone's passport and IC details, locked with the group code.
 // Details are encrypted on the phone (crypto.js) before they're saved; the server never sees them.
-import { h, play, avatar, openSheet, toast, reduceMotion } from "./ui.js?v=17";
-import { unlock, seal, unseal } from "./crypto.js?v=17";
+import { h, play, avatar, openSheet, toast, reduceMotion } from "./ui.js?v=18";
+import { unlock, seal, unseal } from "./crypto.js?v=18";
 
 const CODE_KEY = "cq-code";
 const TRIP_END = "2027-01-05";

@@ -1,8 +1,8 @@
 // The Plan page: who's where, your cost, flights & trains, day by day.
-import { h, play, avatar, yuan, rollNumber, reduceMotion } from "./ui.js?v=17";
-import { mountClock, liveStatus } from "./now.js?v=17";
-import { weather, cityFor, dateOf, now as nowMs, ampm } from "./trip.js?v=17";
-import { icon } from "./icons.js?v=17";
+import { h, play, avatar, yuan, rollNumber, reduceMotion } from "./ui.js?v=18";
+import { mountClock, liveStatus } from "./now.js?v=18";
+import { weather, cityFor, dateOf, now as nowMs, ampm } from "./trip.js?v=18";
+import { icon } from "./icons.js?v=18";
 
 let imgSrc = (s) => s;
 
@@ -73,10 +73,20 @@ function build(root, ctx, which) {
     .flatMap((d) => (d.items || []).filter((it) => it.kind === "place" && it.optionId && forGroup(it.groups, g)))
     .reduce((s, it) => s + (state.options.find((o) => o.id === it.optionId)?.priceCny || 0), 0) * ctx.rate();
   const myTickets = myGroup ? itinTickets(myGroup) : 0;
+  // Booked hotels count at their real price; the other nights use the flat estimate.
+  const bookedStays = (g) => (plan.hotels || []).filter((x) => x.rmEach && forGroup(x.groups, g));
+  const hotelCost = (g) => {
+    const s = bookedStays(g), booked = s.reduce((n, x) => n + dayDiff(x.from, x.to), 0);
+    return s.reduce((n, x) => n + Number(x.rmEach), 0) + Math.max(0, g.nights - booked) * plan.rmPerNight;
+  };
+  const hotelSub = (g) => {
+    const s = bookedStays(g), booked = s.reduce((n, x) => n + dayDiff(x.from, x.to), 0), left = Math.max(0, g.nights - booked);
+    return [s.map((x) => `${x.city || x.name} ${dayDiff(x.from, x.to)} nights booked`).join(", "), left ? `${left} nights × ${rm(plan.rmPerNight)}` : ""].filter(Boolean).join(" + ");
+  };
   if (myGroup) {
     const rows = [
       ["Flights & trains", tripCost(myGroup), "Your legs below, tax included"],
-      ["Hotels", myGroup.nights * plan.rmPerNight, `${myGroup.nights} nights × ${rm(plan.rmPerNight)}`],
+      ["Hotels", hotelCost(myGroup), hotelSub(myGroup)],
       ["Food & getting around", myGroup.days * plan.foodRmPerDay, `${myGroup.days} days × ${rm(plan.foodRmPerDay)}`],
       ["Places in your itinerary", myTickets, "Entry tickets, plus the hotpot and bar estimates"],
     ];
@@ -94,7 +104,7 @@ function build(root, ctx, which) {
       h("h2.sec-title", "Cost per person"),
       h("div.cost-card", h("ul.cost-rows", groups.map((g) => h("li",
         h("span", g.name, h("small", `Flights & trains, ${g.nights} hotel nights, ${g.days} days of food, itinerary places`)),
-        h("span.v", rm(tripCost(g) + g.nights * plan.rmPerNight + g.days * plan.foodRmPerDay + itinTickets(g)))))),
+        h("span.v", rm(tripCost(g) + hotelCost(g) + g.days * plan.foodRmPerDay + itinTickets(g)))))),
         h("p.cost-note", me ? "Ask Leon to add you to a group to see your own budget." : "Sign in to see your own budget."))));
   }
 
@@ -103,6 +113,24 @@ function build(root, ctx, which) {
   sections.push(h("section.plan-sec",
     h("h2.sec-title", "Flights & trains"),
     h("div.trips", trips.map((t, i) => tripCard(t, i, { mine: forGroup(t.groups, myGroup) && !!myGroup, label: groupLabel(t.groups), people: groupPeople(t.groups), faces })))));
+
+  // ---------- Hotels ----------
+  const hotelList = [...(plan.hotels || [])].sort((a, b) => a.from.localeCompare(b.from));
+  if (hotelList.length) sections.push(h("section.plan-sec",
+    h("h2.sec-title", "Hotels"),
+    h("div.trips", hotelList.map((x) => {
+      const n = dayDiff(x.from, x.to), booked = x.status === "booked";
+      return h("div.flight.trip.hotel-card", { class: `flight trip hotel-card ${forGroup(x.groups, myGroup) && myGroup ? "mine" : ""}` },
+        h("div.flight-top",
+          h("span", `${fmt(x.from, { weekday: "short", day: "numeric", month: "short" })} – ${fmt(x.to, { weekday: "short", day: "numeric", month: "short" })} · ${n} night${n === 1 ? "" : "s"}`),
+          h("span.status", { class: `status ${booked ? "booked" : ""}` }, booked ? "Booked" : "Not booked yet")),
+        h("div.hotel-name", icon("bed"), h("span", x.zh || x.name, x.zh ? h("small", x.name) : null)),
+        x.room ? h("p.hotel-room", x.room) : null,
+        h("div.trip-foot",
+          h("span.trip-who", faces(groupPeople(x.groups), 6), h("span", groupLabel(x.groups))),
+          h("span.trip-price", x.rmEach ? "RM " + Number(x.rmEach).toFixed(2) : "", x.rmEach ? h("small", " each") : null)),
+        x.note ? h("p.trip-note", ampm(x.note)) : null);
+    }))));
   }
 
   // ---------- Itinerary (its own tab) ----------
