@@ -1,8 +1,8 @@
 // The Plan page: who's where, your cost, flights & trains, day by day.
-import { h, play, avatar, yuan, rollNumber, reduceMotion } from "./ui.js?v=20";
-import { mountClock, liveStatus } from "./now.js?v=20";
-import { weather, cityFor, dateOf, now as nowMs, ampm } from "./trip.js?v=20";
-import { icon } from "./icons.js?v=20";
+import { h, play, avatar, yuan, rollNumber, reduceMotion } from "./ui.js?v=21";
+import { mountClock, liveStatus } from "./now.js?v=21";
+import { weather, cityFor, dateOf, now as nowMs, ampm } from "./trip.js?v=21";
+import { icon } from "./icons.js?v=21";
 
 let imgSrc = (s) => s;
 
@@ -73,19 +73,23 @@ function build(root, ctx, which) {
     .flatMap((d) => (d.items || []).filter((it) => it.kind === "place" && it.optionId && forGroup(it.groups, g)))
     .reduce((s, it) => s + (state.options.find((o) => o.id === it.optionId)?.priceCny || 0), 0) * ctx.rate();
   const myTickets = myGroup ? itinTickets(myGroup) : 0;
-  // Booked hotels count at their real price; the other nights use the flat estimate.
-  const bookedStays = (g) => (plan.hotels || []).filter((x) => x.rmEach && forGroup(x.groups, g));
+  // Booked hotels count at their real price (rmEach), planned ones at their own estimate (estEach);
+  // "optional" stays are left out, and any night with no hotel entry uses the flat estimate.
+  const isBooked = (x) => x.status === "booked" && x.rmEach;
+  const priced = (g) => (plan.hotels || []).filter((x) => !x.optional && (isBooked(x) || x.estEach) && forGroup(x.groups, g));
+  const costOf = (x) => Number(isBooked(x) ? x.rmEach : x.estEach);
   const hotelCost = (g) => {
-    const s = bookedStays(g), booked = s.reduce((n, x) => n + dayDiff(x.from, x.to), 0);
-    return s.reduce((n, x) => n + Number(x.rmEach), 0) + Math.max(0, g.nights - booked) * plan.rmPerNight;
+    const s = priced(g), covered = s.reduce((n, x) => n + dayDiff(x.from, x.to), 0);
+    return s.reduce((n, x) => n + costOf(x), 0) + Math.max(0, g.nights - covered) * plan.rmPerNight;
   };
   const hotelSub = (g) => {
-    const s = bookedStays(g), booked = s.reduce((n, x) => n + dayDiff(x.from, x.to), 0), left = Math.max(0, g.nights - booked);
+    const s = priced(g), covered = s.reduce((n, x) => n + dayDiff(x.from, x.to), 0), left = Math.max(0, g.nights - covered);
     const nights = (n) => `${n} night${n === 1 ? "" : "s"}`;
     const byCity = {};
-    for (const x of s) byCity[x.city || x.name] = (byCity[x.city || x.name] || 0) + dayDiff(x.from, x.to);
+    for (const x of s.filter(isBooked)) byCity[x.city || x.name] = (byCity[x.city || x.name] || 0) + dayDiff(x.from, x.to);
     const bookedTxt = Object.entries(byCity).map(([c, n]) => `${c} ${nights(n)}`).join(", ");
-    return [bookedTxt ? `${bookedTxt} booked` : "", left ? `${nights(left)} × ${rm(plan.rmPerNight)}` : ""].filter(Boolean).join(" + ");
+    const est = s.filter((x) => !isBooked(x)).reduce((n, x) => n + dayDiff(x.from, x.to), 0);
+    return [bookedTxt ? `${bookedTxt} booked` : "", est ? `${nights(est)} estimated` : "", left ? `${nights(left)} × ${rm(plan.rmPerNight)}` : ""].filter(Boolean).join(" + ");
   };
   if (myGroup) {
     const rows = [
@@ -132,7 +136,8 @@ function build(root, ctx, which) {
         x.room ? h("p.hotel-room", x.room) : null,
         h("div.trip-foot",
           h("span.trip-who", faces(groupPeople(x.groups), 6), h("span", groupLabel(x.groups))),
-          h("span.trip-price", x.rmEach ? "RM " + Number(x.rmEach).toFixed(2) : "", x.rmEach ? h("small", " each") : null)),
+          x.rmEach ? h("span.trip-price", "RM " + Number(x.rmEach).toFixed(2), h("small", " each"))
+            : x.estEach ? h("span.trip-price", h("small", "about "), rm(x.estEach), h("small", " each")) : h("span.trip-price", "")),
         x.note ? h("p.trip-note", ampm(x.note)) : null);
     }))));
   }
