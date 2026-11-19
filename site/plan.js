@@ -1,8 +1,8 @@
 // The Plan page: who's where, your cost, flights & trains, day by day.
-import { h, play, avatar, yuan, rollNumber, reduceMotion } from "./ui.js?v=18";
-import { mountClock, liveStatus } from "./now.js?v=18";
-import { weather, cityFor, dateOf, now as nowMs, ampm } from "./trip.js?v=18";
-import { icon } from "./icons.js?v=18";
+import { h, play, avatar, yuan, rollNumber, reduceMotion } from "./ui.js?v=19";
+import { mountClock, liveStatus } from "./now.js?v=19";
+import { weather, cityFor, dateOf, now as nowMs, ampm } from "./trip.js?v=19";
+import { icon } from "./icons.js?v=19";
 
 let imgSrc = (s) => s;
 
@@ -81,7 +81,11 @@ function build(root, ctx, which) {
   };
   const hotelSub = (g) => {
     const s = bookedStays(g), booked = s.reduce((n, x) => n + dayDiff(x.from, x.to), 0), left = Math.max(0, g.nights - booked);
-    return [s.map((x) => `${x.city || x.name} ${dayDiff(x.from, x.to)} nights booked`).join(", "), left ? `${left} nights × ${rm(plan.rmPerNight)}` : ""].filter(Boolean).join(" + ");
+    const nights = (n) => `${n} night${n === 1 ? "" : "s"}`;
+    const byCity = {};
+    for (const x of s) byCity[x.city || x.name] = (byCity[x.city || x.name] || 0) + dayDiff(x.from, x.to);
+    const bookedTxt = Object.entries(byCity).map(([c, n]) => `${c} ${nights(n)}`).join(", ");
+    return [bookedTxt ? `${bookedTxt} booked` : "", left ? `${nights(left)} × ${rm(plan.rmPerNight)}` : ""].filter(Boolean).join(" + ");
   };
   if (myGroup) {
     const rows = [

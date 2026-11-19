@@ -1,8 +1,8 @@
-import { getState, join, vote, subscribe, imgSrc, saveDoc, deleteDoc } from "./api.js?v=18";
-import { h, $, play, avatar, WHEN, WHEN_ORDER, yuan, ringgit, rollNumber, openSheet, toast, reduceMotion } from "./ui.js?v=18";
-import { renderPlan, renderItinerary } from "./plan.js?v=18";
-import { renderInfo } from "./info.js?v=18";
-import { renderMap, showMap } from "./map.js?v=18";
+import { getState, join, vote, subscribe, imgSrc, saveDoc, deleteDoc } from "./api.js?v=19";
+import { h, $, play, avatar, WHEN, WHEN_ORDER, yuan, ringgit, rollNumber, openSheet, toast, reduceMotion } from "./ui.js?v=19";
+import { renderPlan, renderItinerary } from "./plan.js?v=19";
+import { renderInfo } from "./info.js?v=19";
+import { renderMap, showMap } from "./map.js?v=19";
 
 // ---------- Loading splash ----------
 const splashShownAt = performance.now();
