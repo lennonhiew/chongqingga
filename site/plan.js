@@ -1,8 +1,8 @@
 // The Plan page: who's where, your cost, flights & trains, day by day.
-import { h, play, avatar, yuan, rollNumber, reduceMotion } from "./ui.js?v=21";
-import { mountClock, liveStatus } from "./now.js?v=21";
-import { weather, cityFor, dateOf, now as nowMs, ampm } from "./trip.js?v=21";
-import { icon } from "./icons.js?v=21";
+import { h, play, avatar, yuan, rollNumber, reduceMotion } from "./ui.js?v=23";
+import { mountClock, liveStatus } from "./now.js?v=23";
+import { weather, cityFor, dateOf, now as nowMs, ampm, seatList } from "./trip.js?v=23";
+import { icon } from "./icons.js?v=23";
 
 let imgSrc = (s) => s;
 
@@ -120,7 +120,7 @@ function build(root, ctx, which) {
   const trips = [...(plan.trips || [])].sort((a, b) => (a.date + a.dep).localeCompare(b.date + b.dep));
   sections.push(h("section.plan-sec",
     h("h2.sec-title", "Flights & trains"),
-    h("div.trips", trips.map((t, i) => tripCard(t, i, { mine: forGroup(t.groups, myGroup) && !!myGroup, label: groupLabel(t.groups), people: groupPeople(t.groups), faces })))));
+    h("div.trips", trips.map((t, i) => tripCard(t, i, { mine: forGroup(t.groups, myGroup) && !!myGroup, label: groupLabel(t.groups), people: groupPeople(t.groups), faces, everyone: { members: (plan.groups || []).flatMap((g) => g.members) } })))));
 
   // ---------- Hotels ----------
   const hotelList = [...(plan.hotels || [])].sort((a, b) => a.from.localeCompare(b.from));
@@ -200,7 +200,7 @@ function build(root, ctx, which) {
   firstRender = false;
 }
 
-function tripCard(t, i, { mine, label, people, faces }) {
+function tripCard(t, i, { mine, label, people, faces, everyone }) {
   const plane = t.kind === "flight";
   const path = plane ? "M6 32 Q100 -4 194 32" : "M6 22 L194 22";
   const glyph = plane
@@ -219,9 +219,10 @@ function tripCard(t, i, { mine, label, people, faces }) {
       h("span", fmt(t.date, { weekday: "short", day: "numeric", month: "short" }), " · ", [t.carrier, t.no].filter(Boolean).join(" ")),
       h("span.status", { class: `status ${st}` }, st === "booked" ? "Booked" : st === "reserved" ? "Reserved" : "Not booked yet")),
     h("div.flight-row",
-      h("div.flight-end", h("div.flight-time", tm(t.dep)), h("div.flight-code", t.fromCity || t.from)),
+      h("div.flight-end", h("div.flight-time", tm(t.dep)), h("div.flight-code", [t.fromCity || t.from, t.fromTerm].filter(Boolean).join(" "))),
       h("div", { html: svg }),
-      h("div.flight-end.right", h("div.flight-time", tm(t.arr), t.plusDays ? h("sup", "+" + t.plusDays) : null), h("div.flight-code", t.toCity || t.to))),
+      h("div.flight-end.right", h("div.flight-time", tm(t.arr), t.plusDays ? h("sup", "+" + t.plusDays) : null), h("div.flight-code", [t.toCity || t.to, t.toTerm].filter(Boolean).join(" ")))),
+    t.seats ? h("p.trip-seats", "Seats ", seatList(t, everyone).map(([n, s]) => h("span", h("b", s), " " + n))) : null,
     h("div.trip-foot",
       h("span.trip-who", faces(people, 6), h("span", label)),
       h("span.trip-price", t.rmEach ? rm(t.rmEach) : "", t.rmEach ? h("small", " each") : null)),

@@ -1,8 +1,8 @@
 // The live card at the top of Itinerary: a clock, a countdown to your flight,
 // and during the trip "Now" and "Next" with travel times. Also marks the matching rows in the list.
-import { h, play, reduceMotion } from "./ui.js?v=21";
-import { icon } from "./icons.js?v=21";
-import * as T from "./trip.js?v=21";
+import { h, play, reduceMotion } from "./ui.js?v=23";
+import { icon } from "./icons.js?v=23";
+import * as T from "./trip.js?v=23";
 
 let timer = 0, starter = 0;
 let cur = null; // { host, root, ctx, shape, refs }
@@ -38,7 +38,8 @@ function tick() {
   const pd = st.phase + st.dayN;
   if (cur.pd && cur.pd !== pd && cur.ctx.refresh) { cur.pd = pd; cur.ctx.refresh(); return; }
   cur.pd = pd;
-  const shape = [st.phase, st.now?.key, st.next?.key, st.idle, st.dayN, me?.id, sts.map((x) => x.st.phase).join()].join("|");
+  const pass = T.tripToday(cur.ctx.state.plan, main.g, t)?.trip;
+  const shape = [st.phase, st.now?.key, st.next?.key, st.idle, st.dayN, me?.id, sts.map((x) => x.st.phase).join(), pass ? pass.id + pass.gate : ""].join("|");
   if (shape !== cur.shape) {
     const first = !cur.shape;
     cur.shape = shape;
@@ -75,6 +76,7 @@ function build(st, g, sts, me, t) {
         R.cds.push({ el, st: x.st });
         return h("li", h("span", x.g.name), x.st.phase === "during" ? h("span.nc-mini.live-txt", "On the trip now") : el);
       })) : null,
+      passCard(R, g, me, t),
       me ? otherGroupLine(plan, me, t) : null,
       h("p.nc-hint", icon("shirt"), h("span", T.CLIMATE)),
       h("div.nc-actions",
@@ -121,10 +123,47 @@ function build(st, g, sts, me, t) {
   }
   return h("section.now-card.during", top,
     h("div.nc-day", h("span", `Day ${st.dayN}`, h("small", ` of ${st.days}`)), R.wx),
-    nowBlock, nextBlock,
+    nowBlock, passCard(R, g, me, t), nextBlock,
     h("div.nc-actions",
       btn("now", "Jump to now", jumpToNow),
       btn("map", "Today's map", () => cur.ctx.openMap({ mode: "trip", date: T.dateOf(t) }))));
+}
+
+// On a travel day: the flight or train with seats, gate, terminal and the day's deadlines.
+function passCard(R, g, me, t) {
+  const p = T.tripToday(cur.ctx.state.plan, g, t);
+  if (!p) return null;
+  const x = p.trip, fly = x.kind === "flight";
+  const seats = T.seatList(x, g);
+  const who = cur.ctx.me; // the person signed in (me is their group)
+  const mine = who && x.seats?.[who.name];
+  const rest = seats.filter(([n]) => n !== who?.name);
+  const cell = (label, value, sub, wide) => h("div.bp-cell", { class: `bp-cell ${wide ? "wide" : ""}` }, h("small", label), h("b", value || "—"), sub ? h("span", sub) : null);
+  const end = (code, time, place) => h("div.bp-end", h("b", code), h("span", time), h("small", place));
+  R.steps = T.tripSteps(p).map((s) => {
+    const inEl = h("span.bp-in");
+    return { ...s, inEl, el: h("li", h("span.bp-t", T.clock(s.at)), h("span.bp-l", s.label), inEl) };
+  });
+  return h("section.bp",
+    h("div.bp-head", icon(fly ? "plane" : "metro"), h("span", [x.carrier, x.no].filter(Boolean).join(" ")),
+      h("span.bp-date", T.fmt(p.dep, { weekday: "short", day: "numeric", month: "short" }))),
+    h("div.bp-route",
+      end(x.from, T.clock(p.dep), [x.fromPort || x.fromCity, x.fromTerm].filter(Boolean).join(" ")),
+      h("span.bp-line", icon(fly ? "plane" : "metro")),
+      end(x.to, T.clock(p.arr), [x.toPort || x.toCity, x.toTerm].filter(Boolean).join(" "))),
+    h("div.bp-grid",
+      cell(mine ? "Your seat" : "Seats", mine || seats.map(([, s]) => s).join(" · "), mine ? rest.map(([n, s]) => `${n} ${s}`).join(" · ") : seats.map(([n]) => n).join(" · ")),
+      cell(fly ? "Gate" : "Ticket gate", x.gate, x.gate ? null : "On the screens about 1 h before"),
+      cell("Terminal", x.fromTerm || (fly ? "" : x.fromCity)),
+      bagCell(x.bag, cell)),
+    h("ol.bp-steps", R.steps.map((s) => s.el)),
+    fly && x.no ? h("a.nc-link", { href: T.flightStatusUrl(x.no), target: "_blank", rel: "noopener" }, "Live status, gate and delays") : null);
+}
+
+// "20 kg checked each" fits a cell as "20 kg"; anything longer gets the full row.
+function bagCell(bag, cell) {
+  const m = /^(\d+\s?kg) checked each$/.exec(bag || "");
+  return m ? cell("Bags", m[1], "checked, each") : cell("Bags", bag, null, true);
 }
 
 // Three equal cells: walk, metro, taxi. The fastest one is marked; each opens Amap with that mode.
@@ -168,6 +207,13 @@ function update(st, t) {
       const left = Math.max(0, Math.floor((c.st.start - t) / 1000));
       c.el.textContent = `${Math.floor(left / 86400)}d ${pad(Math.floor(left / 3600) % 24)}:${pad(Math.floor(left / 60) % 60)}:${pad(left % 60)}`;
     }
+  }
+  if (R.steps) {
+    const nextI = R.steps.findIndex((s) => s.at > t);
+    R.steps.forEach((s, i) => {
+      s.el.className = i < nextI || nextI < 0 ? "done" : i === nextI ? "next" : "";
+      s.inEl.textContent = i === nextI ? "in " + until(s.at - t) : "";
+    });
   }
   if (st.phase === "during") {
     if (R.bar && st.now) R.bar.style.transform = `scaleX(${Math.min(1, Math.max(0, (t - st.now.start) / (st.now.end - st.now.start))).toFixed(4)})`;

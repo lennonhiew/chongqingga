@@ -101,6 +101,33 @@ export function status(plan, state, g, t = now()) {
   return { ...base, phase: "during", dayN, now: nowE, prev: cur, next, idle: nowE ? null : hour < 7 ? "Sleeping, probably" : "Free time" };
 }
 
+// ---------- Travel day: the flight or train a group takes today ----------
+// Shown from midnight of the departure day until it lands.
+export function tripToday(plan, g, t = now()) {
+  const today = dateOf(t);
+  return (plan?.trips || [])
+    .filter((x) => forGroup(x.groups, g) && x.date === today && x.dep)
+    .map((x) => ({ trip: x, dep: at(x.date, x.dep), arr: x.arr ? at(addDays(x.date, x.plusDays || 0), x.arr) : at(x.date, x.dep) + 3 * 3600e3 }))
+    .filter((o) => t < o.arr)
+    .sort((a, b) => a.dep - b.dep)[0] || null;
+}
+// The day's deadlines, in order. Minutes before departure come from the trip, with sensible defaults.
+export function tripSteps({ trip: x, dep, arr }) {
+  const fly = x.kind === "flight", m = (n) => dep - n * 60e3;
+  const place = fly ? `${x.fromPort || "the airport"}${x.fromTerm ? " " + x.fromTerm : ""}` : x.fromCity || "the station";
+  return [
+    { at: m(x.arriveBy ?? (fly ? 180 : 40)), label: `Be at ${place}` },
+    fly ? { at: m(x.checkinCloses ?? 60), label: "Check-in and bag drop close" } : null,
+    { at: m(x.gateCloses ?? (fly ? 20 : 5)), label: fly ? "Gate closes" : "Ticket gate closes" },
+    { at: dep, label: fly ? "Takes off" : "Departs" },
+    { at: arr, label: `Lands in ${x.toCity || x.to}${x.toTerm ? " " + x.toTerm : ""}`.replace(/^Lands/, fly ? "Lands" : "Arrives") },
+  ].filter(Boolean);
+}
+// Seats as [name, seat], in the group's own member order (the database reorders object keys).
+export const seatList = (x, g) => { const s = x.seats || {}, order = (g?.members || []).filter((n) => s[n]); return [...order, ...Object.keys(s).filter((n) => !order.includes(n))].map((n) => [n, s[n]]); };
+// Live status page for a flight number like "D7 306" (shows gate and terminal on the day).
+export const flightStatusUrl = (no) => `https://www.flightaware.com/live/flight/${String(no).split("+")[0].replace(/\s+/g, "")}`;
+
 // ---------- Distances and travel estimates ----------
 export function km([la1, lo1], [la2, lo2]) {
   const r = Math.PI / 180, dLa = (la2 - la1) * r, dLo = (lo2 - lo1) * r;
