@@ -1,8 +1,8 @@
 // The live card at the top of Itinerary: a clock, a countdown to your flight,
 // and during the trip "Now" and "Next" with travel times. Also marks the matching rows in the list.
-import { h, play, reduceMotion } from "./ui.js?v=23";
-import { icon } from "./icons.js?v=23";
-import * as T from "./trip.js?v=23";
+import { h, play, reduceMotion } from "./ui.js?v=24";
+import { icon } from "./icons.js?v=24";
+import * as T from "./trip.js?v=24";
 
 let timer = 0, starter = 0;
 let cur = null; // { host, root, ctx, shape, refs }
@@ -151,19 +151,28 @@ function passCard(R, g, me, t) {
       end(x.from, T.clock(p.dep), [x.fromPort || x.fromCity, x.fromTerm].filter(Boolean).join(" ")),
       h("span.bp-line", icon(fly ? "plane" : "metro")),
       end(x.to, T.clock(p.arr), [x.toPort || x.toCity, x.toTerm].filter(Boolean).join(" "))),
-    h("div.bp-grid",
-      cell(mine ? "Your seat" : "Seats", mine || seats.map(([, s]) => s).join(" · "), mine ? rest.map(([n, s]) => `${n} ${s}`).join(" · ") : seats.map(([n]) => n).join(" · ")),
-      cell(fly ? "Gate" : "Ticket gate", x.gate, x.gate ? null : "On the screens about 1 h before"),
-      cell("Terminal", x.fromTerm || (fly ? "" : x.fromCity)),
-      bagCell(x.bag, cell)),
+    h("div.bp-grid", grid([
+      seats.length
+        ? cell(mine ? "Your seat" : "Seats", mine || seats.map(([, s]) => s).join(" · "), mine ? rest.map(([n, s]) => `${n} ${s}`).join(" · ") : seats.map(([n]) => n).join(" · "))
+        : cell("Seats", "", fly ? "Given at check-in" : "On your ticket"),
+      cell(fly ? "Gate" : "Ticket gate 检票口", x.gate, x.gate ? null : fly ? "On the screens about 1 h before" : "On the station screens"),
+      fly && x.fromTerm ? cell("Terminal", x.fromTerm) : null,
+      x.bag ? bagCell(x.bag, cell) : null,
+    ])),
     h("ol.bp-steps", R.steps.map((s) => s.el)),
     fly && x.no ? h("a.nc-link", { href: T.flightStatusUrl(x.no), target: "_blank", rel: "noopener" }, "Live status, gate and delays") : null);
 }
 
-// "20 kg checked each" fits a cell as "20 kg"; anything longer gets the full row.
+// "20 kg checked each, personal item only" fits a cell as "20 kg"; anything else gets the full row.
 function bagCell(bag, cell) {
-  const m = /^(\d+\s?kg) checked each$/.exec(bag || "");
-  return m ? cell("Bags", m[1], "checked, each") : cell("Bags", bag, null, true);
+  const m = /^(\d+\s?kg) checked each(?:,\s*(.+))?$/.exec(bag);
+  return m ? cell("Bags", m[1], ["checked, each", m[2]].filter(Boolean).join(" · ")) : cell("Bags", bag, null, true);
+}
+// Two columns: if the small cells don't pair up, the last one takes the whole row.
+function grid(cells) {
+  const c = cells.filter(Boolean), narrow = c.filter((x) => !x.classList.contains("wide"));
+  if (narrow.length % 2) narrow[narrow.length - 1].classList.add("wide");
+  return c;
 }
 
 // Three equal cells: walk, metro, taxi. The fastest one is marked; each opens Amap with that mode.
