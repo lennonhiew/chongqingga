@@ -9,25 +9,36 @@
   <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <link rel="icon" href="icon.svg" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="icon.svg">
-  <link rel="stylesheet" href="base.css?v=24">
-  <link rel="stylesheet" href="style.css?v=24">
+  <link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="icon" href="favicon-64.png" sizes="64x64" type="image/png">
+  <link rel="icon" href="icon-192.png" sizes="192x192" type="image/png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="preload" href="img/panda.webp" as="image" type="image/webp" fetchpriority="high">
+  <link rel="stylesheet" href="base.css?v=25">
+  <link rel="stylesheet" href="style.css?v=25">
 </head>
 <body>
   <div id="splash" aria-hidden="true">
-    <div class="splash-mark">
-      <svg class="splash-icon" viewBox="0 0 120 120">
-        <defs><linearGradient id="sg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff5a5f"/><stop offset="1" stop-color="#c81d25"/></linearGradient></defs>
-        <rect width="120" height="120" rx="27" fill="url(#sg)"/>
-        <path id="splashArc" class="splash-arc" d="M24 80 Q60 22 96 80"/>
-        <circle cx="24" cy="80" r="6" fill="#fff"/><circle cx="96" cy="80" r="6" fill="#fff"/>
-        <g class="splash-plane"><path fill="#fff" d="M-9 -2 L5 -2 L10 0 L5 2 L-9 2 Z M-1 -2 L-5 -9 L-2 -9 L4 -2 Z M-1 2 L-5 9 L-2 9 L4 2 Z M-9 -1.8 L-11 -6 L-8.5 -6 L-6 -1.8 Z M-9 1.8 L-11 6 L-8.5 6 L-6 1.8 Z"/>
-          <animateMotion dur="1.8s" begin="0.35s" repeatCount="indefinite" rotate="auto" keyPoints="0;1" keyTimes="0;1" calcMode="spline" keySplines="0.45 0 0.35 1"><mpath href="#splashArc"/></animateMotion></g>
-      </svg>
-      <span class="splash-word">Chongqingga</span>
+    <div class="sp-copy">
+      <p class="sp-kicker">重庆 <i></i> 成都</p>
+      <h2 class="sp-word" aria-label="Chongqingga"></h2>
+      <p class="sp-meta"><span>28 Dec – 6 Jan</span><span class="sp-count" id="spCount"></span></p>
     </div>
+    <img class="sp-panda" src="img/panda.webp" alt="" width="1200" height="1200" decoding="async">
+    <div class="sp-bar"><i id="spBar"></i></div>
   </div>
+  <script>
+    // Splash: letters for the wordmark, and how long until everyone is in Chongqing (China time).
+    (function () {
+      var w = document.querySelector(".sp-word"), t = "Chongqingga";
+      for (var i = 0; i < t.length; i++) { var s = document.createElement("span"); s.textContent = t[i]; s.style.setProperty("--i", i); w.appendChild(s); }
+      var now = location.search.match(/now=([\d\-T:]+)/), ms = now ? Date.parse(now[1] + (now[1].length <= 16 ? ":00+08:00" : "+08:00")) : Date.now();
+      var start = Date.parse("2026-12-28T00:00:00+08:00"), end = Date.parse("2027-01-07T00:00:00+08:00");
+      var d = Math.ceil((start - ms) / 864e5), c = document.getElementById("spCount");
+      c.textContent = ms < start ? (d === 1 ? "Tomorrow" : d + " days to go") : ms < end ? "Day " + (Math.floor((ms - start) / 864e5) + 1) + " of 10" : "Hope it was spicy";
+      try { if (sessionStorage.getItem("cq-splash")) document.documentElement.classList.add("sp-quick"); sessionStorage.setItem("cq-splash", "1"); } catch (e) {}
+    })();
+  </script>
 
   <header class="bar" id="bar">
     <span class="bar-title" id="barTitle">Chongqingga</span>
@@ -91,6 +102,6 @@
 
   <div class="offline" id="offline" hidden>Reconnecting…</div>
   <script src="vendor/supabase.js"></script>
-  <script type="module" src="app.js?v=24"></script>
+  <script type="module" src="app.js?v=25"></script>
 </body>
 </html>

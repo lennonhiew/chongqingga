@@ -423,20 +423,50 @@
 .item.tap .tx::after { content: ""; }
 @media (hover: hover) { .item.tap:hover { background: var(--fill-2); } }
 
-/* ================= Loading splash ================= */
-#splash { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: var(--bg); }
-.splash-mark { display: grid; justify-items: center; gap: 18px; }
-.splash-icon { width: 96px; height: 96px; border-radius: 22px; box-shadow: 0 18px 40px rgba(200, 29, 37, 0.28); animation: splash-pop 0.75s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
-.splash-arc { fill: none; stroke: #fff; stroke-width: 4; stroke-linecap: round; stroke-dasharray: 1 9; opacity: 0.9; }
-.splash-word { font-family: var(--display); font-size: 26px; font-weight: 800; letter-spacing: -0.03em; color: var(--text); animation: splash-rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.25s both; }
-#splash.out { animation: splash-out 0.42s cubic-bezier(0.4, 0, 0.2, 1) forwards; pointer-events: none; }
-@keyframes splash-pop { from { transform: scale(0.6); opacity: 0; } to { transform: none; opacity: 1; } }
-@keyframes splash-rise { from { transform: translateY(10px); opacity: 0; } to { transform: none; opacity: 1; } }
-@keyframes splash-out { to { opacity: 0; transform: scale(1.06); filter: blur(6px); } }
+/* ================= Loading splash: the panda on its own red ================= */
+/* One brand moment: wordmark letters rise, the panda peeks up from the corner, a hairline loads along the top,
+   then the whole sheet lifts away like a curtain (the panda lags behind for depth). */
+#splash { --sp-red: #b1403a; --sp-ink: #f6f1ea; position: fixed; inset: 0; z-index: 100; overflow: hidden; background: var(--sp-red); color: var(--sp-ink); }
+.sp-copy { position: absolute; top: calc(env(safe-area-inset-top) + 40px); left: 24px; right: 24px; }
+.sp-kicker { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 600; letter-spacing: 0.24em; opacity: 0.82; animation: sp-fade-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.15s both; }
+.sp-kicker i { width: 4px; height: 4px; border-radius: 50%; background: currentColor; }
+.sp-word { display: flex; overflow: hidden; margin: 8px 0 -0.16em; padding-bottom: 0.2em; font-family: var(--display); font-size: clamp(44px, 13.4vw, 156px); font-weight: 800; line-height: 0.95; letter-spacing: -0.05em; }
+.sp-word span { display: inline-block; animation: sp-letter 0.95s cubic-bezier(0.16, 1, 0.3, 1) both; animation-delay: calc(0.2s + var(--i) * 0.035s); }
+.sp-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 14px; font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; animation: sp-fade-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.55s both; }
+.sp-count { padding: 4px 11px; border-radius: 999px; background: color-mix(in srgb, var(--sp-ink) 16%, transparent); }
+.sp-panda { position: absolute; left: 0; bottom: 0; width: min(108vw, 64vh, 860px); height: auto; transform-origin: 0% 100%; user-select: none; pointer-events: none;
+  animation: sp-panda 1.15s cubic-bezier(0.16, 1, 0.3, 1) 0.05s both, sp-bob 3.4s ease-in-out 1.3s infinite; }
+.sp-bar { position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+.sp-bar i { display: block; height: 100%; background: var(--sp-ink); transform-origin: left; transform: scaleX(0); animation: sp-load 2.6s cubic-bezier(0.1, 0.6, 0.2, 1) 0.2s forwards; }
+@media (min-width: 820px) {
+  .sp-copy { top: 50%; left: auto; right: 7vw; transform: translateY(-50%); text-align: right; }
+  .sp-kicker, .sp-meta { justify-content: flex-end; }
+  .sp-word { font-size: clamp(44px, 8vw, 132px); }
+  .sp-panda { width: min(46vw, 80vh, 900px); }
+}
+#splash.out { animation: sp-lift 0.85s cubic-bezier(0.76, 0, 0.24, 1) forwards; pointer-events: none; }
+#splash.out .sp-panda { animation: sp-sink 0.85s cubic-bezier(0.76, 0, 0.24, 1) forwards; }
+#splash.out .sp-copy { animation: sp-fade-out 0.35s ease-in forwards; }
+#app.sp-reveal { animation: sp-app 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.25s both; }
+/* Second load in the same session: same moment, quicker */
+.sp-quick .sp-word span { animation-duration: 0.6s; animation-delay: calc(var(--i) * 0.015s); }
+.sp-quick .sp-panda { animation-duration: 0.7s, 3.4s; animation-delay: 0s, 0.8s; }
+.sp-quick .sp-kicker, .sp-quick .sp-meta { animation-delay: 0s; }
+@keyframes sp-letter { from { transform: translateY(105%); } to { transform: none; } }
+@keyframes sp-fade-up { from { opacity: 0; transform: translateY(12px); } }
+@keyframes sp-panda { from { transform: translate(-14%, 38%) rotate(-9deg); } to { transform: none; } }
+@keyframes sp-bob { 50% { transform: translateY(1.6%) rotate(-0.8deg); } }
+@keyframes sp-load { to { transform: scaleX(0.86); } }
+@keyframes sp-lift { to { transform: translateY(-100%); } }
+@keyframes sp-sink { from { transform: none; } to { transform: translateY(42%); } }
+@keyframes sp-fade-out { to { opacity: 0; transform: translateY(-16px); } }
+@keyframes sp-app { from { opacity: 0.3; transform: translateY(28px) scale(0.985); } }
+@media (min-width: 820px) { @keyframes sp-fade-out { to { opacity: 0; transform: translateY(calc(-50% - 16px)); } } }
 @media (prefers-reduced-motion: reduce) {
-  .splash-icon, .splash-word { animation: none; }
-  #splash.out { animation: splash-fade 0.2s linear forwards; }
-  @keyframes splash-fade { to { opacity: 0; } }
+  .sp-word span, .sp-kicker, .sp-meta, .sp-panda, .sp-bar i { animation: none; }
+  .sp-bar i { transform: scaleX(0.86); }
+  #splash.out, #splash.out .sp-panda, #splash.out .sp-copy, #app.sp-reveal { animation: none; }
+  #splash.out { transition: opacity 0.25s linear; opacity: 0; }
 }
 
 /* ================= Info tab (travel documents) ================= */

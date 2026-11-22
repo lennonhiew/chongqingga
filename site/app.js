@@ -1,17 +1,35 @@
-import { getState, join, vote, subscribe, imgSrc, saveDoc, deleteDoc } from "./api.js?v=24";
-import { h, $, play, avatar, WHEN, WHEN_ORDER, yuan, ringgit, rollNumber, openSheet, toast, reduceMotion } from "./ui.js?v=24";
-import { renderPlan, renderItinerary } from "./plan.js?v=24";
-import { renderInfo } from "./info.js?v=24";
-import { renderMap, showMap } from "./map.js?v=24";
+import { getState, join, vote, subscribe, imgSrc, saveDoc, deleteDoc } from "./api.js?v=25";
+import { h, $, play, avatar, WHEN, WHEN_ORDER, yuan, ringgit, rollNumber, openSheet, toast, reduceMotion } from "./ui.js?v=25";
+import { renderPlan, renderItinerary } from "./plan.js?v=25";
+import { renderInfo } from "./info.js?v=25";
+import { renderMap, showMap } from "./map.js?v=25";
 
 // ---------- Loading splash ----------
+// Stays long enough to see the panda arrive (shorter on a second load in the same session),
+// then the loading line finishes and the sheet lifts away.
 const splashShownAt = performance.now();
-if (reduceMotion.matches) document.querySelector(".splash-icon")?.pauseAnimations?.();
 function hideSplash() {
   const s = document.getElementById("splash");
-  if (!s || s.classList.contains("out")) return;
-  const wait = Math.max(0, 900 - (performance.now() - splashShownAt)); // long enough to see one flight
-  setTimeout(() => { s.classList.add("out"); s.addEventListener("animationend", () => s.remove(), { once: true }); setTimeout(() => s.remove(), 800); }, wait);
+  if (!s || s.dataset.leaving) return;
+  s.dataset.leaving = "1";
+  const quick = document.documentElement.classList.contains("sp-quick");
+  const wait = Math.max(0, (quick ? 650 : 1500) - (performance.now() - splashShownAt));
+  setTimeout(() => {
+    const bar = document.getElementById("spBar");
+    if (bar) {
+      const cur = getComputedStyle(bar).transform;
+      bar.style.animation = "none";
+      bar.style.transform = cur;
+      bar.getBoundingClientRect();
+      bar.style.transition = "transform 0.3s cubic-bezier(0.22, 1, 0.36, 1)";
+      bar.style.transform = "scaleX(1)";
+    }
+    setTimeout(() => {
+      s.classList.add("out");
+      document.getElementById("app")?.classList.add("sp-reveal");
+      setTimeout(() => { s.remove(); document.getElementById("app")?.classList.remove("sp-reveal"); }, 1200);
+    }, reduceMotion.matches ? 0 : 280);
+  }, wait);
 }
 setTimeout(hideSplash, 8000); // never get stuck behind it
 
