@@ -1,9 +1,9 @@
 // The Map tab: every place on an Amap base map, or the trip day by day with the legs between stops.
 // Leaflet loads only the first time the tab opens. Hotels (plan.hotels) are always on the map.
-import { h, play, reduceMotion, yuan } from "./ui.js?v=26";
-import { icon, svg } from "./icons.js?v=26";
-import { transport } from "./now.js?v=26";
-import * as T from "./trip.js?v=26";
+import { h, play, reduceMotion, yuan } from "./ui.js?v=27";
+import { icon, svg } from "./icons.js?v=27";
+import { transport } from "./now.js?v=27";
+import * as T from "./trip.js?v=27";
 
 // Amap street style with Chinese labels, the same names as the signs and the Amap app.
 const TILES = "https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}";
@@ -137,7 +137,7 @@ function itineraryStops() {
   const g = myGroup(), geo = plan().geo || {}, seen = new Set(), out = [];
   for (const d of (plan().days || []).slice().sort((x, y) => x.date.localeCompare(y.date))) {
     if (!T.forGroup(d.groups, g)) continue;
-    const tone = toneOf(d.city) === "cd" ? "cd" : "cq";
+    const tone = toneOf(d.city); // cq, cd, or camp (the Zhejiang winter camp)
     for (const it of d.items || []) {
       if (!T.forGroup(it.groups, g)) continue;
       if (it.kind === "place" && it.optionId) {
@@ -145,7 +145,7 @@ function itineraryStops() {
         if (!o || !at || seen.has(o.id)) continue;
         seen.add(o.id);
         out.push({ o, geo: at, tone, d });
-      } else if (it.kind === "spot" && it.at) {
+      } else if (it.at && (it.kind === "spot" || (tone === "camp" && it.kind !== "flight" && it.kind !== "hotel"))) {
         const k = it.zh || it.text;
         if (seen.has(k)) continue;
         seen.add(k);
@@ -169,20 +169,25 @@ function drawAll() {
     pop(m, i);
   });
   const chip = (id, label, n) => h("button.chip.pressable", { "aria-pressed": String(area === id), onclick: () => { area = id; drawnKey = ""; hideCard(); draw(); } }, h("span", label), h("small", n));
+  const nCamp = all.filter((s) => s.tone === "camp").length;
   els.top.replaceChildren(h("div.chips", chip(null, "All", all.length),
+    nCamp ? chip("camp", "浙江 Zhejiang", nCamp) : null,
     chip("cq", "重庆 Chongqing", all.filter((s) => s.tone === "cq").length),
     chip("cd", "成都 Chengdu", all.filter((s) => s.tone === "cd").length)));
   const key = (cls, label) => h("span.key-item", h("i", { class: `k ${cls}` }), label);
-  els.below.replaceChildren(h("div.map-key", key("cq", "Chongqing"), key("cd", "Chengdu"),
+  els.below.replaceChildren(h("div.map-key", nCamp ? key("camp", "Zhejiang camp") : null, key("cq", "Chongqing"), key("cd", "Chengdu"),
     T.hotels(plan(), myGroup()).length ? key("hotel", "Hotel") : null));
-  // Two cities 270 km apart: start on the city you're in (or Chongqing), leaving out far day trips.
-  fitTo(core(all.filter((s) => s.tone === (area || cityNow())).map((s) => s.geo)));
+  // Cities far apart: start on where you are (or Chongqing), leaving out far day trips.
+  // The camp moves across Zhejiang (Hangzhou → Yiwu → Wenzhou), so it shows its whole route.
+  const focus = area || cityNow(), pts = all.filter((s) => s.tone === focus).map((s) => s.geo);
+  fitTo(focus === "camp" ? pts : core(pts));
 }
 
 function cityNow() {
   const st = T.status(plan(), ctx.state, myGroup());
   const e = st.now || st.next;
-  return T.cityFor(e?.day.city || "") === "Chengdu" ? "cd" : "cq";
+  const tone = toneOf(e?.day.city || "Chongqing");
+  return tone === "camp" && !itineraryStops().some((s) => s.tone === "camp") ? "cq" : tone;
 }
 
 function drawTrip() {

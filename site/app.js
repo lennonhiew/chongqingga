@@ -1,8 +1,8 @@
-import { getState, join, vote, subscribe, imgSrc, saveDoc, deleteDoc } from "./api.js?v=26";
-import { h, $, play, avatar, WHEN, WHEN_ORDER, yuan, ringgit, rollNumber, openSheet, toast, reduceMotion } from "./ui.js?v=26";
-import { renderPlan, renderItinerary } from "./plan.js?v=26";
-import { renderInfo } from "./info.js?v=26";
-import { renderMap, showMap } from "./map.js?v=26";
+import { getState, join, vote, subscribe, imgSrc, saveDoc, deleteDoc } from "./api.js?v=27";
+import { h, $, play, avatar, WHEN, WHEN_ORDER, yuan, ringgit, rollNumber, openSheet, toast, reduceMotion } from "./ui.js?v=27";
+import { renderPlan, renderItinerary } from "./plan.js?v=27";
+import { renderInfo } from "./info.js?v=27";
+import { renderMap, showMap } from "./map.js?v=27";
 
 // ---------- Loading splash ----------
 // Stays long enough to see the panda arrive (shorter on a second load in the same session),
